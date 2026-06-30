@@ -39,7 +39,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     final ProductProvider provider = context.watch<ProductProvider>();
-    final String? bannerMessage = provider.errorMessage ?? provider.alertMessage;
+    final String? bannerMessage =
+        provider.errorMessage ?? provider.alertMessage;
     final AlertBannerType bannerType = provider.errorMessage == null
         ? AlertBannerType.warning
         : AlertBannerType.error;
@@ -152,9 +153,11 @@ class _BottomNav extends StatelessWidget {
       },
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Products'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.inventory_2_outlined), label: 'Products',),
         BottomNavigationBarItem(icon: Icon(Icons.sell_outlined), label: 'Sell'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Purchase'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined), label: 'Purchase',),
         BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
       ],
     );
@@ -164,7 +167,9 @@ class _BottomNav extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppConstants.colors.background,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radii.sheet))),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radii.sheet),),),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -259,7 +264,8 @@ class _InventoryHeader extends StatelessWidget {
                 children: <Widget>[
                   IconButton(
                     onPressed: () => _showSortSheet(context, provider),
-                    icon: Icon(Icons.sort_rounded, color: AppConstants.colors.primary),
+                    icon: Icon(Icons.sort_rounded,
+                        color: AppConstants.colors.primary,),
                     tooltip: 'Sort Products',
                   ),
                   TextButton(
@@ -288,7 +294,8 @@ class _InventoryHeader extends StatelessWidget {
             children: <Widget>[
               Padding(
                 padding: EdgeInsets.all(AppConstants.spacing.page),
-                child: Text('Sort by', style: Theme.of(context).textTheme.titleMedium),
+                child: Text('Sort by',
+                    style: Theme.of(context).textTheme.titleMedium,),
               ),
               _SortTile(
                 label: 'Newest First',
@@ -340,7 +347,9 @@ class _SortTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(label),
-      trailing: selected ? Icon(Icons.check_circle, color: AppConstants.colors.primary) : null,
+      trailing: selected
+          ? Icon(Icons.check_circle, color: AppConstants.colors.primary)
+          : null,
       onTap: () {
         onTap();
         Navigator.pop(context);
@@ -367,8 +376,10 @@ class _SummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              _SummaryItem(label: 'Total Products', value: '${provider.totalItems}'),
-              _SummaryItem(label: 'Total Stock', value: '${provider.totalStock}'),
+              _SummaryItem(
+                  label: 'Total Products', value: '${provider.totalItems}',),
+              _SummaryItem(
+                  label: 'Total Stock', value: '${provider.totalStock}',),
             ],
           ),
           SizedBox(height: AppConstants.spacing.lg),
@@ -377,11 +388,13 @@ class _SummaryCard extends StatelessWidget {
             children: <Widget>[
               _SummaryItem(
                 label: 'Inventory Value',
-                value: '${AppConstants.currencySymbol}${provider.totalBuyValue.round()}',
+                value:
+                    '${AppConstants.currencySymbol}${provider.totalBuyValue.round()}',
               ),
               _SummaryItem(
                 label: 'Today\'s Profit',
-                value: '${AppConstants.currencySymbol}${provider.todayProfit.round()}',
+                value:
+                    '${AppConstants.currencySymbol}${provider.todayProfit.round()}',
               ),
             ],
           ),
@@ -504,7 +517,8 @@ class _QuickStatCard extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 10),
+            style:
+                TextStyle(color: AppConstants.colors.textMuted, fontSize: 10),
           ),
         ],
       ),

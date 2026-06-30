@@ -19,7 +19,8 @@ class PaymentSummary extends StatelessWidget {
       padding: EdgeInsets.all(AppConstants.spacing.page),
       decoration: BoxDecoration(
         color: AppConstants.colors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radii.xl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppConstants.radii.xl)),
         border: Border.all(color: AppConstants.colors.border),
       ),
       child: Column(
@@ -68,7 +69,9 @@ class _SummaryRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: isBold ? AppConstants.colors.textPrimary : AppConstants.colors.textSecondary,
+              color: isBold
+                  ? AppConstants.colors.textPrimary
+                  : AppConstants.colors.textSecondary,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               fontSize: large ? 16 : 14,
             ),
@@ -76,7 +79,10 @@ class _SummaryRow extends StatelessWidget {
           Text(
             '${isNegative ? "-" : ""}${AppConstants.currencySymbol}${value.toStringAsFixed(2)}',
             style: TextStyle(
-              color: color ?? (isBold ? AppConstants.colors.textPrimary : AppConstants.colors.textSecondary),
+              color: color ??
+                  (isBold
+                      ? AppConstants.colors.textPrimary
+                      : AppConstants.colors.textSecondary),
               fontWeight: isBold ? FontWeight.w900 : FontWeight.normal,
               fontSize: large ? 20 : 14,
             ),

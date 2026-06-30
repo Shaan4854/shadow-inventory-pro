@@ -12,7 +12,8 @@ class TimelineTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isIncrease = movement.quantityChange > 0;
-    final Color color = isIncrease ? AppConstants.colors.green : AppConstants.colors.red;
+    final Color color =
+        isIncrease ? AppConstants.colors.green : AppConstants.colors.red;
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: AppConstants.spacing.sm),

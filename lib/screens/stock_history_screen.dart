@@ -14,7 +14,8 @@ class StockHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductProvider>();
-    final movements = provider.movements.where((m) => m.productId == product.id).toList();
+    final movements =
+        provider.movements.where((m) => m.productId == product.id).toList();
 
     return Scaffold(
       backgroundColor: AppConstants.colors.background,
@@ -23,7 +24,9 @@ class StockHistoryScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('STOCK HISTORY', style: TextStyle(fontSize: 16)),
-            Text(product.name, style: TextStyle(fontSize: 12, color: AppConstants.colors.textSecondary)),
+            Text(product.name,
+                style: TextStyle(
+                    fontSize: 12, color: AppConstants.colors.textSecondary,),),
           ],
         ),
       ),
@@ -67,7 +70,9 @@ class _StockHeader extends StatelessWidget {
           _Stat(
             label: 'Status',
             value: product.stock <= product.alertThreshold ? 'Low' : 'Healthy',
-            color: product.stock <= product.alertThreshold ? AppConstants.colors.red : AppConstants.colors.green,
+            color: product.stock <= product.alertThreshold
+                ? AppConstants.colors.red
+                : AppConstants.colors.green,
           ),
         ],
       ),
@@ -85,7 +90,9 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 10)),
+        Text(label,
+            style:
+                TextStyle(color: AppConstants.colors.textMuted, fontSize: 10),),
         Text(
           value,
           style: TextStyle(

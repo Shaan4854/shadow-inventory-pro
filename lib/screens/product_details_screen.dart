@@ -38,7 +38,8 @@ class ProductDetailsScreen extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => _confirmDelete(context),
-            icon: Icon(Icons.delete_outline_rounded, color: AppConstants.colors.red),
+            icon: Icon(Icons.delete_outline_rounded,
+                color: AppConstants.colors.red,),
           ),
         ],
       ),
@@ -95,15 +96,6 @@ class ProductDetailsScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Available in the next update.'),
-        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -207,7 +199,8 @@ class _StockStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isLow = product.stock <= product.alertThreshold;
-    final Color color = isLow ? AppConstants.colors.red : AppConstants.colors.green;
+    final Color color =
+        isLow ? AppConstants.colors.red : AppConstants.colors.green;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -262,13 +255,18 @@ class _DetailsGrid extends StatelessWidget {
         ),
         SizedBox(height: AppConstants.spacing.md),
         const _Divider(),
-        _RowItem(label: 'Brand', value: product.brand.isEmpty ? '-' : product.brand),
+        _RowItem(
+            label: 'Brand', value: product.brand.isEmpty ? '-' : product.brand,),
         const _Divider(),
         _RowItem(label: 'SKU', value: product.sku.isEmpty ? '-' : product.sku),
         const _Divider(),
-        _RowItem(label: 'Barcode', value: product.barcode.isEmpty ? '-' : product.barcode),
+        _RowItem(
+            label: 'Barcode',
+            value: product.barcode.isEmpty ? '-' : product.barcode,),
         const _Divider(),
-        _RowItem(label: 'Category', value: product.category.isEmpty ? 'General' : product.category),
+        _RowItem(
+            label: 'Category',
+            value: product.category.isEmpty ? 'General' : product.category,),
         const _Divider(),
         const _RowItem(label: 'Supplier', value: 'Reliable Traders'), // Mock
       ],

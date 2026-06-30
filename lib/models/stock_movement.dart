@@ -57,7 +57,8 @@ class StockMovement extends Equatable {
   }
 
   /// Creates a movement from a SQLite map.
-  factory StockMovement.fromMap(Map<String, Object?> map, {String? productName, String? productEmoji}) {
+  factory StockMovement.fromMap(Map<String, Object?> map,
+      {String? productName, String? productEmoji,}) {
     return StockMovement(
       id: map['id'] as String,
       productId: map['product_id'] as String,

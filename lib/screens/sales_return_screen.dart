@@ -35,7 +35,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           productName: item.productName,
           productEmoji: item.productEmoji,
           productUnit: item.productUnit,
-        ));
+        ),);
       }
     });
   }
@@ -65,9 +65,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   }
 
   Future<void> _processReturn() async {
-    final activeItems = _returnItems.where((item) => item.quantity > 0).toList();
+    final activeItems =
+        _returnItems.where((item) => item.quantity > 0).toList();
     if (activeItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select at least one item to return.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Select at least one item to return.')),);
       return;
     }
 
@@ -80,13 +82,15 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       notes: _reasonController.text,
       entityName: _originalTransaction!.entityName,
       createdAt: DateTime.now(),
-      items: activeItems.map((item) => TransactionItem(
-        id: item.id,
-        transactionId: transactionId,
-        productId: item.productId,
-        quantity: item.quantity,
-        priceAtTime: item.priceAtTime,
-      )).toList(),
+      items: activeItems
+          .map((item) => TransactionItem(
+                id: item.id,
+                transactionId: transactionId,
+                productId: item.productId,
+                quantity: item.quantity,
+                priceAtTime: item.priceAtTime,
+              ),)
+          .toList(),
     );
 
     await context.read<ProductProvider>().addTransaction(returnTx);
@@ -102,14 +106,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       appBar: AppBar(
         title: const Text('SALES RETURN'),
       ),
-      body: _originalTransaction == null ? _TransactionPicker(onSelected: _selectTransaction, type: TransactionType.sale) : _ReturnForm(
-        original: _originalTransaction!,
-        returnItems: _returnItems,
-        reasonController: _reasonController,
-        onQuantityChanged: _updateReturnQuantity,
-        onCancel: () => setState(() => _originalTransaction = null),
-        onConfirm: _processReturn,
-      ),
+      body: _originalTransaction == null
+          ? _TransactionPicker(
+              onSelected: _selectTransaction, type: TransactionType.sale,)
+          : _ReturnForm(
+              original: _originalTransaction!,
+              returnItems: _returnItems,
+              reasonController: _reasonController,
+              onQuantityChanged: _updateReturnQuantity,
+              onCancel: () => setState(() => _originalTransaction = null),
+              onConfirm: _processReturn,
+            ),
     );
   }
 }
@@ -121,7 +128,11 @@ class _TransactionPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final transactions = context.watch<ProductProvider>().transactions.where((tx) => tx.type == type).toList();
+    final transactions = context
+        .watch<ProductProvider>()
+        .transactions
+        .where((tx) => tx.type == type)
+        .toList();
 
     if (transactions.isEmpty) {
       return const Center(child: Text('No sales found.'));
@@ -170,14 +181,22 @@ class _ReturnForm extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Original Sale', style: TextStyle(fontWeight: FontWeight.bold)),
-                    TextButton(onPressed: onCancel, child: const Text('Change')),
+                    const Text('Original Sale',
+                        style: TextStyle(fontWeight: FontWeight.bold),),
+                    TextButton(
+                        onPressed: onCancel, child: const Text('Change'),),
                   ],
                 ),
-                Text('Customer: ${original.entityName}', style: TextStyle(color: AppConstants.colors.textSecondary)),
-                Text('Date: ${original.createdAt.toString().split('.')[0]}', style: TextStyle(color: AppConstants.colors.textSecondary)),
+                Text('Customer: ${original.entityName}',
+                    style: TextStyle(color: AppConstants.colors.textSecondary),),
+                Text('Date: ${original.createdAt.toString().split('.')[0]}',
+                    style: TextStyle(color: AppConstants.colors.textSecondary),),
                 const Divider(height: 32),
-                const Text('SELECT ITEMS TO RETURN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                const Text('SELECT ITEMS TO RETURN',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,),),
                 SizedBox(height: AppConstants.spacing.md),
                 ...original.items.asMap().entries.map((entry) {
                   final index = entry.key;
@@ -189,19 +208,26 @@ class _ReturnForm extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppConstants.colors.surface,
-                      borderRadius: BorderRadius.circular(AppConstants.radii.md),
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radii.md),
                       border: Border.all(color: AppConstants.colors.border),
                     ),
                     child: Row(
                       children: [
-                        Text(originalItem.productEmoji, style: const TextStyle(fontSize: 20)),
+                        Text(originalItem.productEmoji,
+                            style: const TextStyle(fontSize: 20),),
                         SizedBox(width: AppConstants.spacing.md),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(originalItem.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('Sold: ${originalItem.quantity}', style: TextStyle(fontSize: 12, color: AppConstants.colors.textMuted)),
+                              Text(originalItem.productName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,),),
+                              Text('Sold: ${originalItem.quantity}',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppConstants.colors.textMuted,),),
                             ],
                           ),
                         ),
@@ -217,7 +243,8 @@ class _ReturnForm extends StatelessWidget {
                 SizedBox(height: AppConstants.spacing.lg),
                 TextField(
                   controller: reasonController,
-                  decoration: const InputDecoration(labelText: 'Reason for return'),
+                  decoration:
+                      const InputDecoration(labelText: 'Reason for return'),
                 ),
               ],
             ),
@@ -228,7 +255,8 @@ class _ReturnForm extends StatelessWidget {
           color: AppConstants.colors.surface,
           child: FilledButton(
             onPressed: onConfirm,
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+            style:
+                FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
             child: const Text('CONFIRM RETURN'),
           ),
         ),
@@ -238,7 +266,8 @@ class _ReturnForm extends StatelessWidget {
 }
 
 class _QuantitySelector extends StatelessWidget {
-  const _QuantitySelector({required this.value, required this.max, required this.onChanged});
+  const _QuantitySelector(
+      {required this.value, required this.max, required this.onChanged,});
   final int value;
   final int max;
   final ValueChanged<int> onChanged;
@@ -247,9 +276,13 @@ class _QuantitySelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(onPressed: value > 0 ? () => onChanged(value - 1) : null, icon: const Icon(Icons.remove_circle_outline)),
+        IconButton(
+            onPressed: value > 0 ? () => onChanged(value - 1) : null,
+            icon: const Icon(Icons.remove_circle_outline),),
         Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
-        IconButton(onPressed: value < max ? () => onChanged(value + 1) : null, icon: const Icon(Icons.add_circle_outline)),
+        IconButton(
+            onPressed: value < max ? () => onChanged(value + 1) : null,
+            icon: const Icon(Icons.add_circle_outline),),
       ],
     );
   }

@@ -21,7 +21,7 @@ class TransactionCard extends StatelessWidget {
       color: AppConstants.colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-        side: Border.all(color: AppConstants.colors.border),
+        side: BorderSide(color: AppConstants.colors.border),
       ),
       child: InkWell(
         onTap: onTap,
@@ -41,7 +41,8 @@ class TransactionCard extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        DateFormat('MMM dd, yyyy • hh:mm a').format(transaction.createdAt),
+                        DateFormat('MMM dd, yyyy • hh:mm a')
+                            .format(transaction.createdAt),
                         style: TextStyle(
                           color: AppConstants.colors.textMuted,
                           fontSize: 12,

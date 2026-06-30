@@ -72,5 +72,6 @@ class TransactionItem extends Equatable {
   }
 
   @override
-  List<Object?> get props => <Object?>[id, transactionId, productId, quantity, priceAtTime];
+  List<Object?> get props =>
+      <Object?>[id, transactionId, productId, quantity, priceAtTime];
 }

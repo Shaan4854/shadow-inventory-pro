@@ -23,9 +23,13 @@ class TimelineScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history_rounded, size: 64, color: AppConstants.colors.textMuted.withValues(alpha: 0.3)),
-                  SizedBox(height: 16),
-                  Text('No stock movements recorded yet.', style: TextStyle(color: AppConstants.colors.textMuted)),
+                  Icon(Icons.history_rounded,
+                      size: 64,
+                      color:
+                          AppConstants.colors.textMuted.withValues(alpha: 0.3),),
+                  const SizedBox(height: 16),
+                  Text('No stock movements recorded yet.',
+                      style: TextStyle(color: AppConstants.colors.textMuted),),
                 ],
               ),
             )

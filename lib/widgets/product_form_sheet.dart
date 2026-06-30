@@ -288,7 +288,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
       return;
     }
 
-    _nameController.text = widget.isDuplicate ? '${product.name} (Copy)' : product.name;
+    _nameController.text =
+        widget.isDuplicate ? '${product.name} (Copy)' : product.name;
     _brandController.text = product.brand;
     _unitController.text = product.unit;
     _buyController.text = _formatNumber(product.buyPrice);
@@ -344,14 +345,19 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
 
   void _generateSku() {
     final String prefix = _nameController.text.isNotEmpty
-        ? _nameController.text.substring(0, min(3, _nameController.text.length)).toUpperCase()
+        ? _nameController.text
+            .substring(0, min(3, _nameController.text.length))
+            .toUpperCase()
         : 'PRD';
     final String random = Random().nextInt(9999).toString().padLeft(4, '0');
     setState(() => _skuController.text = '$prefix-$random');
   }
 
   void _generateBarcode() {
-    final String random = (Random().nextDouble() * 1000000000000).toInt().toString().padLeft(12, '0');
+    final String random = (Random().nextDouble() * 1000000000000)
+        .toInt()
+        .toString()
+        .padLeft(12, '0');
     setState(() => _barcodeController.text = random);
   }
 
@@ -386,7 +392,9 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     final String fileName = '${_uuid.v4()}$extension';
     final String destinationPath = path.join(imageDirectory.path, fileName);
 
-    return File(pickedFile.path).copy(destinationPath).then((File file) => file.path);
+    return File(pickedFile.path)
+        .copy(destinationPath)
+        .then((File file) => file.path);
   }
 
   Future<void> _saveProduct() async {
@@ -409,7 +417,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
       }
 
       if (mounted) {
-        widget.provider.showAlert(_isEditMode ? 'Product updated.' : 'Product added.');
+        widget.provider
+            .showAlert(_isEditMode ? 'Product updated.' : 'Product added.');
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -486,7 +495,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   String? _validateSellPrice(String? value) {
     final double? sell = double.tryParse((value ?? '').trim());
     if (sell == null || sell < 0) return 'Enter 0 or more';
-    
+
     final double buy = _parseDouble(_buyController.text);
     if (sell < buy) {
       // Returning null as this is just a warning, but we could return a message if we wanted to enforce it.
@@ -511,7 +520,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   String? _validateSku(String? value) {
     final String sku = (value ?? '').trim();
     if (sku.isEmpty) return null;
-    if (widget.provider.isSkuDuplicate(sku, _isEditMode ? widget.product?.id : null)) {
+    if (widget.provider
+        .isSkuDuplicate(sku, _isEditMode ? widget.product?.id : null)) {
       return 'SKU already exists';
     }
     return null;
@@ -520,7 +530,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   String? _validateBarcode(String? value) {
     final String barcode = (value ?? '').trim();
     if (barcode.isEmpty) return null;
-    if (widget.provider.isBarcodeDuplicate(barcode, _isEditMode ? widget.product?.id : null)) {
+    if (widget.provider
+        .isBarcodeDuplicate(barcode, _isEditMode ? widget.product?.id : null)) {
       return 'Barcode already exists';
     }
     return null;
@@ -758,9 +769,8 @@ class _ProfitPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accentColor = value >= 0
-        ? AppConstants.colors.green
-        : AppConstants.colors.red;
+    final Color accentColor =
+        value >= 0 ? AppConstants.colors.green : AppConstants.colors.red;
 
     return AnimatedContainer(
       duration: AppConstants.durations.fast,
@@ -776,7 +786,9 @@ class _ProfitPreview extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Icon(
-            value >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+            value >= 0
+                ? Icons.trending_up_rounded
+                : Icons.trending_down_rounded,
             color: accentColor,
             size: 18,
           ),

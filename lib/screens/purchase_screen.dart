@@ -20,10 +20,13 @@ class PurchaseScreen extends StatefulWidget {
 
 class _PurchaseScreenState extends State<PurchaseScreen> {
   final List<TransactionItem> _items = [];
-  final TextEditingController _entityController = TextEditingController(text: 'Primary Supplier');
+  final TextEditingController _entityController =
+      TextEditingController(text: 'Primary Supplier');
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _discountController = TextEditingController(text: '0');
-  final TextEditingController _transportController = TextEditingController(text: '0');
+  final TextEditingController _discountController =
+      TextEditingController(text: '0');
+  final TextEditingController _transportController =
+      TextEditingController(text: '0');
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.total);
   double get _discount => double.tryParse(_discountController.text) ?? 0;
@@ -41,7 +44,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
 
   void _addItem(Product product) {
     setState(() {
-      final existingIndex = _items.indexWhere((item) => item.productId == product.id);
+      final existingIndex =
+          _items.indexWhere((item) => item.productId == product.id);
       if (existingIndex != -1) {
         final existing = _items[existingIndex];
         _items[existingIndex] = TransactionItem(
@@ -64,7 +68,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           productName: product.name,
           productEmoji: product.emoji,
           productUnit: product.unit,
-        ));
+        ),);
       }
     });
   }
@@ -106,13 +110,15 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       notes: _notesController.text,
       entityName: _entityController.text,
       createdAt: DateTime.now(),
-      items: _items.map((item) => TransactionItem(
-        id: item.id,
-        transactionId: transactionId,
-        productId: item.productId,
-        quantity: item.quantity,
-        priceAtTime: item.priceAtTime,
-      )).toList(),
+      items: _items
+          .map((item) => TransactionItem(
+                id: item.id,
+                transactionId: transactionId,
+                productId: item.productId,
+                quantity: item.quantity,
+                priceAtTime: item.priceAtTime,
+              ),)
+          .toList(),
     );
 
     await context.read<ProductProvider>().addTransaction(transaction);
@@ -176,10 +182,11 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   else
                     ..._items.asMap().entries.map((entry) => _PurchaseItemTile(
                           item: entry.value,
-                          onQuantityChanged: (q) => _updateQuantity(entry.key, q),
-                        )),
+                          onQuantityChanged: (q) =>
+                              _updateQuantity(entry.key, q),
+                        ),),
                   SizedBox(height: AppConstants.spacing.lg),
-                  _SectionHeader(title: 'Additional info'),
+                  const _SectionHeader(title: 'Additional info'),
                   Row(
                     children: [
                       Expanded(
@@ -236,7 +243,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       isScrollControlled: true,
       backgroundColor: AppConstants.colors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radii.sheet)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radii.sheet),),
       ),
       builder: (_) => _ProductPicker(onSelected: _addItem),
     );
@@ -270,7 +278,8 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _PurchaseItemTile extends StatelessWidget {
-  const _PurchaseItemTile({required this.item, required this.onQuantityChanged});
+  const _PurchaseItemTile(
+      {required this.item, required this.onQuantityChanged,});
 
   final TransactionItem item;
   final ValueChanged<int> onQuantityChanged;
@@ -295,17 +304,20 @@ class _PurchaseItemTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppConstants.radii.md),
             ),
             alignment: Alignment.center,
-            child: Text(item.productEmoji, style: const TextStyle(fontSize: 20)),
+            child:
+                Text(item.productEmoji, style: const TextStyle(fontSize: 20)),
           ),
           SizedBox(width: AppConstants.spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(item.productName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),),
                 Text(
                   '${AppConstants.currencySymbol}${item.priceAtTime} / ${item.productUnit}',
-                  style: TextStyle(color: AppConstants.colors.textSecondary, fontSize: 12),
+                  style: TextStyle(
+                      color: AppConstants.colors.textSecondary, fontSize: 12,),
                 ),
               ],
             ),
@@ -336,7 +348,7 @@ class _ProductPickerState extends State<_ProductPicker> {
   Widget build(BuildContext context) {
     final products = context.watch<ProductProvider>().products.where((p) {
       return p.name.toLowerCase().contains(_query.toLowerCase()) ||
-             p.sku.toLowerCase().contains(_query.toLowerCase());
+          p.sku.toLowerCase().contains(_query.toLowerCase());
     }).toList();
 
     return Container(

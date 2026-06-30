@@ -56,11 +56,14 @@ class ProductCard extends StatelessWidget {
                   ),
                   Text(
                     product.category.isEmpty ? 'General' : product.category,
-                    style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 12),
+                    style: TextStyle(
+                        color: AppConstants.colors.textMuted, fontSize: 12,),
                   ),
                   Text(
                     '${AppConstants.currencySymbol}${product.sellPrice}',
-                    style: TextStyle(color: AppConstants.colors.green, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: AppConstants.colors.green,
+                        fontWeight: FontWeight.bold,),
                   ),
                 ],
               ),
@@ -75,14 +78,17 @@ class ProductCard extends StatelessWidget {
                 Text(
                   isOutOfStock ? 'Out of Stock' : 'In Stock',
                   style: TextStyle(
-                    color: isOutOfStock ? AppConstants.colors.red : AppConstants.colors.green,
+                    color: isOutOfStock
+                        ? AppConstants.colors.red
+                        : AppConstants.colors.green,
                     fontSize: 10,
                   ),
                 ),
               ],
             ),
             SizedBox(width: AppConstants.spacing.md),
-            Icon(Icons.more_vert, color: AppConstants.colors.textMuted, size: 18),
+            Icon(Icons.more_vert,
+                color: AppConstants.colors.textMuted, size: 18,),
           ],
         ),
       ),

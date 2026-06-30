@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../repositories/product_repository.dart';
 import '../models/stock_movement.dart';
 import '../models/transaction.dart';
+import '../models/transaction_type.dart';
 import '../utils/app_constants.dart';
 import '../utils/filter_type.dart';
 import '../utils/sort_type.dart';
@@ -91,7 +92,8 @@ class ProductProvider extends ChangeNotifier {
 
   /// Total current stock quantity across all products.
   int get totalStock {
-    return _products.fold<int>(0, (int total, Product product) => total + product.stock);
+    return _products.fold<int>(
+        0, (int total, Product product) => total + product.stock,);
   }
 
   /// Total current purchase value of stock.
@@ -121,23 +123,26 @@ class ProductProvider extends ChangeNotifier {
   double get todayProfit {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     return _transactions
         .where((tx) => tx.createdAt.isAfter(today))
-        .where((tx) => tx.type == TransactionType.sale || tx.type == TransactionType.salesReturn)
-        .fold<double>(0, (sum, tx) {
-          double txProfit = 0;
-          for (var item in tx.items) {
-            final product = _products.firstWhere((p) => p.id == item.productId, orElse: () => _emptyProduct);
-            if (product.id.isNotEmpty) {
-              txProfit += (item.priceAtTime - product.buyPrice) * item.quantity;
-            }
-          }
-          if (tx.type == TransactionType.salesReturn) {
-            return sum - (txProfit - tx.discount);
-          }
-          return sum + (txProfit - tx.discount);
-        });
+        .where((tx) =>
+            tx.type == TransactionType.sale ||
+            tx.type == TransactionType.salesReturn,)
+        .fold<double>(0.0, (sum, tx) {
+      double txProfit = 0;
+      for (var item in tx.items) {
+        final product = _products.firstWhere((p) => p.id == item.productId,
+            orElse: () => _emptyProduct,);
+        if (product.id.isNotEmpty) {
+          txProfit += (item.priceAtTime - product.buyPrice) * item.quantity;
+        }
+      }
+      if (tx.type == TransactionType.salesReturn) {
+        return sum - (txProfit - tx.discount);
+      }
+      return sum + (txProfit - tx.discount);
+    });
   }
 
   static final Product _emptyProduct = Product(
@@ -184,7 +189,7 @@ class ProductProvider extends ChangeNotifier {
 
     try {
       await _productRepository.seedDatabaseIfEmpty();
-      
+
       final results = await Future.wait([
         _productRepository.getProducts(),
         _productRepository.getCategories(),
@@ -193,7 +198,7 @@ class ProductProvider extends ChangeNotifier {
       ]);
 
       _replaceProducts(results[0] as List<Product>);
-      
+
       _categories
         ..clear()
         ..addAll(results[1] as List<String>);
@@ -205,7 +210,6 @@ class ProductProvider extends ChangeNotifier {
       _movements
         ..clear()
         ..addAll(results[3] as List<StockMovement>);
-
     } catch (error) {
       _setError('Unable to load inventory data.');
     } finally {
@@ -260,12 +264,13 @@ class ProductProvider extends ChangeNotifier {
       await _productRepository.addProduct(product);
       _products.insert(0, product);
       _setLowStockAlertIfNeeded(product);
-      
-      if (product.category.isNotEmpty && !_categories.contains(product.category)) {
+
+      if (product.category.isNotEmpty &&
+          !_categories.contains(product.category)) {
         await _productRepository.addCategory(product.category);
         _categories.add(product.category);
       }
-      
+
       notifyListeners();
     } catch (error) {
       _setError('Unable to add product.');
@@ -295,7 +300,8 @@ class ProductProvider extends ChangeNotifier {
       await _productRepository.updateProduct(product);
       _setLowStockAlertIfNeeded(product);
 
-      if (product.category.isNotEmpty && !_categories.contains(product.category)) {
+      if (product.category.isNotEmpty &&
+          !_categories.contains(product.category)) {
         await _productRepository.addCategory(product.category);
         _categories.add(product.category);
       }
@@ -343,7 +349,8 @@ class ProductProvider extends ChangeNotifier {
     if (barcode.isEmpty) {
       return false;
     }
-    return _products.any((Product p) => p.barcode == barcode && p.id != excludeId);
+    return _products
+        .any((Product p) => p.barcode == barcode && p.id != excludeId);
   }
 
   void _deleteImageFile(String? path) {
@@ -424,7 +431,9 @@ class ProductProvider extends ChangeNotifier {
     final String sku = product.sku.toLowerCase();
     final String barcode = product.barcode.toLowerCase();
 
-    return name.contains(query) || sku.contains(query) || barcode.contains(query);
+    return name.contains(query) ||
+        sku.contains(query) ||
+        barcode.contains(query);
   }
 
   bool _matchesFilter(Product product) {
@@ -433,8 +442,7 @@ class ProductProvider extends ChangeNotifier {
       FilterType.inStock => product.stock > 0,
       FilterType.outOfStock => product.stock == 0,
       FilterType.lowStock => _isLowStock(product),
-      FilterType.highStock =>
-        product.stock >= AppConstants.highStockThreshold,
+      FilterType.highStock => product.stock >= AppConstants.highStockThreshold,
     };
   }
 
@@ -443,9 +451,11 @@ class ProductProvider extends ChangeNotifier {
       case SortType.newest:
         list.sort((Product a, Product b) => b.updatedAt.compareTo(a.updatedAt));
       case SortType.nameAsc:
-        list.sort((Product a, Product b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        list.sort((Product a, Product b) =>
+            a.name.toLowerCase().compareTo(b.name.toLowerCase()),);
       case SortType.nameDesc:
-        list.sort((Product a, Product b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
+        list.sort((Product a, Product b) =>
+            b.name.toLowerCase().compareTo(a.name.toLowerCase()),);
       case SortType.stockAsc:
         list.sort((Product a, Product b) => a.stock.compareTo(b.stock));
       case SortType.stockDesc:

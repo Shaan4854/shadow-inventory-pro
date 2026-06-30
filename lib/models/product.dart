@@ -98,9 +98,8 @@ class Product extends Equatable {
       sellPrice: sellPrice ?? this.sellPrice,
       stock: stock ?? this.stock,
       alertThreshold: alertThreshold ?? this.alertThreshold,
-      imagePath: identical(imagePath, _unset)
-          ? this.imagePath
-          : imagePath as String?,
+      imagePath:
+          identical(imagePath, _unset) ? this.imagePath : imagePath as String?,
       emoji: emoji ?? this.emoji,
       category: category ?? this.category,
       brand: brand ?? this.brand,

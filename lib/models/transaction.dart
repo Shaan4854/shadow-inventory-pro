@@ -62,7 +62,8 @@ class Transaction extends Equatable {
   }
 
   /// Creates a transaction from a SQLite map.
-  factory Transaction.fromMap(Map<String, Object?> map, {List<TransactionItem> items = const <TransactionItem>[]}) {
+  factory Transaction.fromMap(Map<String, Object?> map,
+      {List<TransactionItem> items = const <TransactionItem>[],}) {
     return Transaction(
       id: map['id'] as String,
       type: TransactionType.values.byName(map['type'] as String),
@@ -77,5 +78,15 @@ class Transaction extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, type, totalAmount, discount, notes, paymentMethod, entityName, createdAt, items];
+  List<Object?> get props => [
+        id,
+        type,
+        totalAmount,
+        discount,
+        notes,
+        paymentMethod,
+        entityName,
+        createdAt,
+        items,
+      ];
 }

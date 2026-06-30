@@ -1,8 +1,8 @@
 import 'package:path/path.dart' as path;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqflite.dart' as sqlite;
 
 import '../models/product.dart';
-import '../models/transaction.dart';
+import '../models/transaction.dart' as model;
 import '../models/transaction_item.dart';
 import '../models/transaction_type.dart';
 import '../models/stock_movement.dart';
@@ -23,10 +23,10 @@ class DatabaseHelper {
   static const String transactionItemsTable = 'transaction_items';
   static const String stockMovementsTable = 'stock_movements';
 
-  Database? _database;
+  sqlite.Database? _database;
 
   /// Returns the open database, creating it if needed.
-  Future<Database> get database async {
+  Future<sqlite.Database> get database async {
     if (_database != null) {
       return _database!;
     }
@@ -35,11 +35,11 @@ class DatabaseHelper {
     return _database!;
   }
 
-  Future<Database> _openDatabase() async {
-    final String databaseDirectory = await getDatabasesPath();
+  Future<sqlite.Database> _openDatabase() async {
+    final String databaseDirectory = await sqlite.getDatabasesPath();
     final String databasePath = path.join(databaseDirectory, databaseName);
 
-    return openDatabase(
+    return sqlite.openDatabase(
       databasePath,
       version: databaseVersion,
       onCreate: _onCreate,
@@ -48,11 +48,11 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> _onConfigure(Database db) async {
+  Future<void> _onConfigure(sqlite.Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
   }
 
-  Future<void> _onCreate(Database db, int version) async {
+  Future<void> _onCreate(sqlite.Database db, int version) async {
     await db.execute(_createProductsTableSql);
     await db.execute(_createCategoriesTableSql);
     await db.execute(_createTransactionsTableSql);
@@ -60,10 +60,13 @@ class DatabaseHelper {
     await db.execute(_createStockMovementsTableSql);
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future<void> _onUpgrade(
+      sqlite.Database db, int oldVersion, int newVersion,) async {
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE $productsTable ADD COLUMN brand TEXT NOT NULL DEFAULT ""');
-      await db.execute('ALTER TABLE $productsTable ADD COLUMN unit TEXT NOT NULL DEFAULT "pcs"');
+      await db.execute(
+          'ALTER TABLE $productsTable ADD COLUMN brand TEXT NOT NULL DEFAULT ""',);
+      await db.execute(
+          'ALTER TABLE $productsTable ADD COLUMN unit TEXT NOT NULL DEFAULT "pcs"',);
       await db.execute(_createCategoriesTableSql);
     }
     if (oldVersion < 3) {
@@ -142,24 +145,27 @@ CREATE TABLE $stockMovementsTable (
 
   /// Fetches every category.
   Future<List<String>> getCategories() async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     final List<Map<String, Object?>> maps = await db.query(categoriesTable);
     return maps.map((Map<String, Object?> m) => m['name'] as String).toList();
   }
 
   /// Inserts a category if it doesn't exist.
   Future<void> insertCategory(String name) async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     await db.insert(
       categoriesTable,
-      <String, Object?>{'id': DateTime.now().millisecondsSinceEpoch.toString(), 'name': name},
-      conflictAlgorithm: ConflictAlgorithm.ignore,
+      <String, Object?>{
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'name': name,
+      },
+      conflictAlgorithm: sqlite.ConflictAlgorithm.ignore,
     );
   }
 
   /// Fetches every product ordered by newest update first.
   Future<List<Product>> getProducts() async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     final List<Map<String, Object?>> maps = await db.query(
       productsTable,
       orderBy: 'updated_at DESC',
@@ -170,7 +176,7 @@ CREATE TABLE $stockMovementsTable (
 
   /// Fetches one product by id.
   Future<Product?> getProduct(String id) async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     final List<Map<String, Object?>> maps = await db.query(
       productsTable,
       where: 'id = ?',
@@ -187,24 +193,24 @@ CREATE TABLE $stockMovementsTable (
 
   /// Inserts a product.
   Future<void> insertProduct(Product product) async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     await db.insert(
       productsTable,
       product.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.abort,
+      conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
     );
   }
 
   /// Inserts many products in a single transaction.
   Future<void> insertProducts(List<Product> products) async {
-    final Database db = await database;
-    await db.transaction((Transaction txn) async {
-      final Batch batch = txn.batch();
+    final sqlite.Database db = await database;
+    await db.transaction((sqlite.Transaction txn) async {
+      final sqlite.Batch batch = txn.batch();
       for (final Product product in products) {
         batch.insert(
           productsTable,
           product.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.abort,
+          conflictAlgorithm: sqlite.ConflictAlgorithm.abort,
         );
       }
       await batch.commit(noResult: true);
@@ -213,7 +219,7 @@ CREATE TABLE $stockMovementsTable (
 
   /// Updates an existing product by id.
   Future<void> updateProduct(Product product) async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     await db.update(
       productsTable,
       product.toMap(),
@@ -224,7 +230,7 @@ CREATE TABLE $stockMovementsTable (
 
   /// Deletes a product by id.
   Future<void> deleteProduct(String id) async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     await db.delete(
       productsTable,
       where: 'id = ?',
@@ -234,8 +240,8 @@ CREATE TABLE $stockMovementsTable (
 
   /// Returns the number of stored products.
   Future<int> countProducts() async {
-    final Database db = await database;
-    final int? count = Sqflite.firstIntValue(
+    final sqlite.Database db = await database;
+    final int? count = sqlite.Sqflite.firstIntValue(
       await db.rawQuery('SELECT COUNT(*) FROM $productsTable'),
     );
     return count ?? 0;
@@ -243,7 +249,7 @@ CREATE TABLE $stockMovementsTable (
 
   /// Closes the current database connection.
   Future<void> close() async {
-    final Database? db = _database;
+    final sqlite.Database? db = _database;
     if (db == null) {
       return;
     }
@@ -254,9 +260,9 @@ CREATE TABLE $stockMovementsTable (
 
   // --- Transactions ---
 
-  Future<void> insertTransaction(Transaction transaction) async {
-    final Database db = await database;
-    await db.transaction((Transaction txn) async {
+  Future<void> insertTransaction(model.Transaction transaction) async {
+    final sqlite.Database db = await database;
+    await db.transaction((sqlite.Transaction txn) async {
       // 1. Insert Transaction
       await txn.insert(transactionsTable, transaction.toMap());
 
@@ -265,7 +271,7 @@ CREATE TABLE $stockMovementsTable (
         await txn.insert(transactionItemsTable, item.toMap());
 
         // 3. Insert Stock Movement
-        int quantityChange;
+        int quantityChange = 0;
         switch (transaction.type) {
           case TransactionType.purchase:
           case TransactionType.salesReturn:
@@ -276,11 +282,13 @@ CREATE TABLE $stockMovementsTable (
             quantityChange = -item.quantity;
             break;
           case TransactionType.adjustment:
-            quantityChange = item.quantity; // Adjustment model should define sign
+            quantityChange =
+                item.quantity; // Adjustment model should define sign
             break;
         }
 
-        final String movementId = DateTime.now().microsecondsSinceEpoch.toString();
+        final String movementId =
+            DateTime.now().microsecondsSinceEpoch.toString();
         await txn.insert(stockMovementsTable, {
           'id': movementId,
           'product_id': item.productId,
@@ -294,20 +302,24 @@ CREATE TABLE $stockMovementsTable (
         // 4. Update Product Stock
         await txn.rawUpdate(
           'UPDATE $productsTable SET stock = stock + ?, updated_at = ? WHERE id = ?',
-          [quantityChange, transaction.createdAt.millisecondsSinceEpoch, item.productId],
+          [
+            quantityChange,
+            transaction.createdAt.millisecondsSinceEpoch,
+            item.productId,
+          ],
         );
       }
     });
   }
 
-  Future<List<Transaction>> getTransactions() async {
-    final Database db = await database;
+  Future<List<model.Transaction>> getTransactions() async {
+    final sqlite.Database db = await database;
     final List<Map<String, Object?>> maps = await db.query(
       transactionsTable,
       orderBy: 'created_at DESC',
     );
 
-    final List<Transaction> transactions = [];
+    final List<model.Transaction> transactions = [];
     for (final map in maps) {
       final String transactionId = map['id'] as String;
       final List<Map<String, Object?>> itemMaps = await db.rawQuery('''
@@ -315,16 +327,18 @@ CREATE TABLE $stockMovementsTable (
         FROM $transactionItemsTable ti
         JOIN $productsTable p ON ti.product_id = p.id
         WHERE ti.transaction_id = ?
-      ''', [transactionId]);
+      ''', [transactionId],);
 
-      final items = itemMaps.map((m) => TransactionItem.fromMap(
-        m,
-        productName: m['product_name'] as String?,
-        productEmoji: m['product_emoji'] as String?,
-        productUnit: m['product_unit'] as String?,
-      )).toList();
+      final items = itemMaps
+          .map((m) => TransactionItem.fromMap(
+                m,
+                productName: m['product_name'] as String?,
+                productEmoji: m['product_emoji'] as String?,
+                productUnit: m['product_unit'] as String?,
+              ),)
+          .toList();
 
-      transactions.add(Transaction.fromMap(map, items: items));
+      transactions.add(model.Transaction.fromMap(map, items: items));
     }
     return transactions;
   }
@@ -332,18 +346,22 @@ CREATE TABLE $stockMovementsTable (
   // --- Stock Movements ---
 
   Future<void> insertStockMovement(StockMovement movement) async {
-    final Database db = await database;
-    await db.transaction((Transaction txn) async {
+    final sqlite.Database db = await database;
+    await db.transaction((sqlite.Transaction txn) async {
       await txn.insert(stockMovementsTable, movement.toMap());
       await txn.rawUpdate(
         'UPDATE $productsTable SET stock = stock + ?, updated_at = ? WHERE id = ?',
-        [movement.quantityChange, movement.createdAt.millisecondsSinceEpoch, movement.productId],
+        [
+          movement.quantityChange,
+          movement.createdAt.millisecondsSinceEpoch,
+          movement.productId,
+        ],
       );
     });
   }
 
   Future<List<StockMovement>> getStockMovements({String? productId}) async {
-    final Database db = await database;
+    final sqlite.Database db = await database;
     String query = '''
       SELECT sm.*, p.name as product_name, p.emoji as product_emoji
       FROM $stockMovementsTable sm
@@ -359,10 +377,12 @@ CREATE TABLE $stockMovementsTable (
     query += ' ORDER BY sm.created_at DESC';
 
     final List<Map<String, Object?>> maps = await db.rawQuery(query, args);
-    return maps.map((m) => StockMovement.fromMap(
-      m,
-      productName: m['product_name'] as String?,
-      productEmoji: m['product_emoji'] as String?,
-    )).toList();
+    return maps
+        .map((m) => StockMovement.fromMap(
+              m,
+              productName: m['product_name'] as String?,
+              productEmoji: m['product_emoji'] as String?,
+            ),)
+        .toList();
   }
 }

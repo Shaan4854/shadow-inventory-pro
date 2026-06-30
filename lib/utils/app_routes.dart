@@ -32,7 +32,8 @@ abstract final class AppRoutes {
     return switch (settings.name) {
       productDetails => MaterialPageRoute<void>(
           settings: settings,
-          builder: (_) => ProductDetailsScreen(product: settings.arguments as Product),
+          builder: (_) =>
+              ProductDetailsScreen(product: settings.arguments as Product),
         ),
       purchase => MaterialPageRoute<void>(
           settings: settings,
@@ -52,11 +53,13 @@ abstract final class AppRoutes {
         ),
       stockAdjustment => MaterialPageRoute<void>(
           settings: settings,
-          builder: (_) => StockAdjustmentScreen(product: settings.arguments as Product?),
+          builder: (_) =>
+              StockAdjustmentScreen(product: settings.arguments as Product?),
         ),
       stockHistory => MaterialPageRoute<void>(
           settings: settings,
-          builder: (_) => StockHistoryScreen(product: settings.arguments as Product),
+          builder: (_) =>
+              StockHistoryScreen(product: settings.arguments as Product),
         ),
       timeline => MaterialPageRoute<void>(
           settings: settings,
@@ -64,7 +67,8 @@ abstract final class AppRoutes {
         ),
       transactionDetails => MaterialPageRoute<void>(
           settings: settings,
-          builder: (_) => TransactionDetailsScreen(transaction: settings.arguments as Transaction),
+          builder: (_) => TransactionDetailsScreen(
+              transaction: settings.arguments as Transaction,),
         ),
       _ => MaterialPageRoute<void>(
           settings: settings,

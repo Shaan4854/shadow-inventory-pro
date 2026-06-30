@@ -30,9 +30,11 @@ class TransactionDetailsScreen extends StatelessWidget {
             _FinancialSummary(transaction: transaction),
             if (transaction.notes.isNotEmpty) ...[
               SizedBox(height: AppConstants.spacing.xl),
-              const Text('Notes', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Notes',
+                  style: TextStyle(fontWeight: FontWeight.bold),),
               SizedBox(height: AppConstants.spacing.xs),
-              Text(transaction.notes, style: TextStyle(color: AppConstants.colors.textSecondary)),
+              Text(transaction.notes,
+                  style: TextStyle(color: AppConstants.colors.textSecondary),),
             ],
           ],
         ),
@@ -61,8 +63,10 @@ class _TransactionHeader extends StatelessWidget {
             children: [
               StatusBadge(type: transaction.type),
               Text(
-                DateFormat('MMM dd, yyyy • hh:mm a').format(transaction.createdAt),
-                style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 12),
+                DateFormat('MMM dd, yyyy • hh:mm a')
+                    .format(transaction.createdAt),
+                style: TextStyle(
+                    color: AppConstants.colors.textMuted, fontSize: 12,),
               ),
             ],
           ),
@@ -78,7 +82,10 @@ class _TransactionHeader extends StatelessWidget {
           const Divider(height: 32),
           Text(
             'ID: ${transaction.id.substring(0, 8).toUpperCase()}',
-            style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 10, fontFamily: 'monospace'),
+            style: TextStyle(
+                color: AppConstants.colors.textMuted,
+                fontSize: 10,
+                fontFamily: 'monospace',),
           ),
         ],
       ),
@@ -95,7 +102,9 @@ class _ItemsList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('ITEMS', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: 12)),
+        const Text('ITEMS',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: 12,),),
         SizedBox(height: AppConstants.spacing.md),
         ...items.map((item) => Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
@@ -107,10 +116,14 @@ class _ItemsList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(item.productName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600),),
                         Text(
                           '${item.quantity} x ${AppConstants.currencySymbol}${item.priceAtTime}',
-                          style: TextStyle(color: AppConstants.colors.textSecondary, fontSize: 12),
+                          style: TextStyle(
+                              color: AppConstants.colors.textSecondary,
+                              fontSize: 12,),
                         ),
                       ],
                     ),
@@ -121,7 +134,7 @@ class _ItemsList extends StatelessWidget {
                   ),
                 ],
               ),
-            )),
+            ),),
       ],
     );
   }
@@ -142,7 +155,8 @@ class _FinancialSummary extends StatelessWidget {
       child: Column(
         children: [
           _SummaryRow(label: 'Subtotal', value: transaction.totalAmount),
-          _SummaryRow(label: 'Discount', value: transaction.discount, isNegative: true),
+          _SummaryRow(
+              label: 'Discount', value: transaction.discount, isNegative: true,),
           const Divider(height: 24),
           _SummaryRow(
             label: 'Total Amount',
@@ -157,7 +171,12 @@ class _FinancialSummary extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value, this.isNegative = false, this.isBold = false, this.color});
+  const _SummaryRow(
+      {required this.label,
+      required this.value,
+      this.isNegative = false,
+      this.isBold = false,
+      this.color,});
   final String label;
   final double value;
   final bool isNegative;
@@ -169,11 +188,15 @@ class _SummaryRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: isBold ? Colors.white : AppConstants.colors.textSecondary)),
+        Text(label,
+            style: TextStyle(
+                color:
+                    isBold ? Colors.white : AppConstants.colors.textSecondary,),),
         Text(
           '${isNegative ? "-" : ""}${AppConstants.currencySymbol}${value.toStringAsFixed(2)}',
           style: TextStyle(
-            color: color ?? (isBold ? Colors.white : AppConstants.colors.textPrimary),
+            color: color ??
+                (isBold ? Colors.white : AppConstants.colors.textPrimary),
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             fontSize: isBold ? 18 : 14,
           ),

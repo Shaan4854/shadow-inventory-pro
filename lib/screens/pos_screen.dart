@@ -20,9 +20,11 @@ class PosScreen extends StatefulWidget {
 
 class _PosScreenState extends State<PosScreen> {
   final List<TransactionItem> _cart = [];
-  final TextEditingController _customerController = TextEditingController(text: 'Walk-in Customer');
+  final TextEditingController _customerController =
+      TextEditingController(text: 'Walk-in Customer');
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _discountController = TextEditingController(text: '0');
+  final TextEditingController _discountController =
+      TextEditingController(text: '0');
   String _paymentMethod = 'Cash';
 
   double get _subtotal => _cart.fold(0, (sum, item) => sum + item.total);
@@ -31,10 +33,12 @@ class _PosScreenState extends State<PosScreen> {
 
   double get _totalProfit {
     final provider = context.read<ProductProvider>();
-    return _cart.fold(0, (sum, item) {
-      final product = provider.products.firstWhere((p) => p.id == item.productId);
-      return sum + ((item.priceAtTime - product.buyPrice) * item.quantity);
-    }) - _discount;
+    return _cart.fold(0.0, (sum, item) {
+          final product =
+              provider.products.firstWhere((p) => p.id == item.productId);
+          return sum + ((item.priceAtTime - product.buyPrice) * item.quantity);
+        }) -
+        _discount;
   }
 
   void _addToCart(Product product) {
@@ -46,7 +50,8 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     setState(() {
-      final existingIndex = _cart.indexWhere((item) => item.productId == product.id);
+      final existingIndex =
+          _cart.indexWhere((item) => item.productId == product.id);
       if (existingIndex != -1) {
         final existing = _cart[existingIndex];
         if (existing.quantity >= product.stock) {
@@ -75,14 +80,17 @@ class _PosScreenState extends State<PosScreen> {
           productName: product.name,
           productEmoji: product.emoji,
           productUnit: product.unit,
-        ));
+        ),);
       }
     });
   }
 
   void _updateQuantity(int index, int quantity) {
     final item = _cart[index];
-    final product = context.read<ProductProvider>().products.firstWhere((p) => p.id == item.productId);
+    final product = context
+        .read<ProductProvider>()
+        .products
+        .firstWhere((p) => p.id == item.productId);
 
     if (quantity > product.stock) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -127,13 +135,15 @@ class _PosScreenState extends State<PosScreen> {
       entityName: _customerController.text,
       paymentMethod: _paymentMethod,
       createdAt: DateTime.now(),
-      items: _cart.map((item) => TransactionItem(
-        id: item.id,
-        transactionId: transactionId,
-        productId: item.productId,
-        quantity: item.quantity,
-        priceAtTime: item.priceAtTime,
-      )).toList(),
+      items: _cart
+          .map((item) => TransactionItem(
+                id: item.id,
+                transactionId: transactionId,
+                productId: item.productId,
+                quantity: item.quantity,
+                priceAtTime: item.priceAtTime,
+              ),)
+          .toList(),
     );
 
     await context.read<ProductProvider>().addTransaction(transaction);
@@ -173,9 +183,9 @@ class _PosScreenState extends State<PosScreen> {
                     ..._cart.asMap().entries.map((e) => _CartItemTile(
                           item: e.value,
                           onQuantityChanged: (q) => _updateQuantity(e.key, q),
-                        )),
+                        ),),
                   SizedBox(height: AppConstants.spacing.lg),
-                  _SectionHeader(title: 'Transaction Details'),
+                  const _SectionHeader(title: 'Transaction Details'),
                   TextField(
                     controller: _customerController,
                     decoration: const InputDecoration(
@@ -185,7 +195,7 @@ class _PosScreenState extends State<PosScreen> {
                   ),
                   SizedBox(height: AppConstants.spacing.md),
                   DropdownButtonFormField<String>(
-                    value: _paymentMethod,
+                    initialValue: _paymentMethod,
                     items: ['Cash', 'UPI', 'Card', 'Credit']
                         .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                         .toList(),
@@ -227,9 +237,11 @@ class _PosScreenState extends State<PosScreen> {
               onPressed: _checkout,
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radii.md)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radii.md),),
               ),
-              child: const Text('COMPLETE SALE', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('COMPLETE SALE',
+                  style: TextStyle(fontWeight: FontWeight.bold),),
             ),
           ),
         ],
@@ -243,7 +255,8 @@ class _PosScreenState extends State<PosScreen> {
       isScrollControlled: true,
       backgroundColor: AppConstants.colors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radii.sheet)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radii.sheet),),
       ),
       builder: (_) => _ProductPicker(onSelected: _addToCart),
     );
@@ -275,7 +288,8 @@ class _CartHeader extends StatelessWidget {
           if (itemCount > 0)
             TextButton(
               onPressed: onClear,
-              child: Text('Clear', style: TextStyle(color: AppConstants.colors.red)),
+              child: Text('Clear',
+                  style: TextStyle(color: AppConstants.colors.red),),
             ),
         ],
       ),
@@ -292,12 +306,15 @@ class _EmptyCart extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          SizedBox(height: 40),
-          Icon(Icons.shopping_basket_outlined, size: 64, color: AppConstants.colors.textMuted.withValues(alpha: 0.5)),
-          SizedBox(height: 16),
-          Text('Your cart is empty', style: TextStyle(color: AppConstants.colors.textMuted)),
+          const SizedBox(height: 40),
+          Icon(Icons.shopping_basket_outlined,
+              size: 64,
+              color: AppConstants.colors.textMuted.withValues(alpha: 0.5),),
+          const SizedBox(height: 16),
+          Text('Your cart is empty',
+              style: TextStyle(color: AppConstants.colors.textMuted),),
           TextButton(onPressed: onAdd, child: const Text('Browse Products')),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -328,10 +345,12 @@ class _CartItemTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(item.productName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),),
                 Text(
                   '${AppConstants.currencySymbol}${item.priceAtTime} x ${item.quantity}',
-                  style: TextStyle(color: AppConstants.colors.textSecondary, fontSize: 12),
+                  style: TextStyle(
+                      color: AppConstants.colors.textSecondary, fontSize: 12,),
                 ),
               ],
             ),
@@ -358,7 +377,10 @@ class _ProfitPreview extends StatelessWidget {
       child: Center(
         child: Text(
           'Estimated Profit: ${AppConstants.currencySymbol}${profit.toStringAsFixed(2)}',
-          style: TextStyle(color: AppConstants.colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+          style: TextStyle(
+              color: AppConstants.colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,),
         ),
       ),
     );
@@ -401,8 +423,8 @@ class _ProductPickerState extends State<_ProductPicker> {
   Widget build(BuildContext context) {
     final products = context.watch<ProductProvider>().products.where((p) {
       return p.name.toLowerCase().contains(_query.toLowerCase()) ||
-             p.sku.toLowerCase().contains(_query.toLowerCase()) ||
-             p.barcode.toLowerCase().contains(_query.toLowerCase());
+          p.sku.toLowerCase().contains(_query.toLowerCase()) ||
+          p.barcode.toLowerCase().contains(_query.toLowerCase());
     }).toList();
 
     return Container(
@@ -428,10 +450,12 @@ class _ProductPickerState extends State<_ProductPicker> {
                 return ListTile(
                   leading: Text(p.emoji, style: const TextStyle(fontSize: 24)),
                   title: Text(p.name),
-                  subtitle: Text('Stock: ${p.stock} ${p.unit} • ${AppConstants.currencySymbol}${p.sellPrice}'),
-                  trailing: isOutOfStock 
-                    ? const Text('Out of Stock', style: TextStyle(color: Colors.red, fontSize: 10))
-                    : const Icon(Icons.add_shopping_cart_rounded, size: 20),
+                  subtitle: Text(
+                      'Stock: ${p.stock} ${p.unit} • ${AppConstants.currencySymbol}${p.sellPrice}',),
+                  trailing: isOutOfStock
+                      ? const Text('Out of Stock',
+                          style: TextStyle(color: Colors.red, fontSize: 10),)
+                      : const Icon(Icons.add_shopping_cart_rounded, size: 20),
                   enabled: !isOutOfStock,
                   onTap: () {
                     widget.onSelected(p);

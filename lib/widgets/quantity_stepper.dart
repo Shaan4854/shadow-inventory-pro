@@ -42,7 +42,9 @@ class QuantityStepper extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: (max == null || value < max!) ? () => onChanged(value + 1) : null,
+            onPressed: (max == null || value < max!)
+                ? () => onChanged(value + 1)
+                : null,
             icon: const Icon(Icons.add_rounded, size: 18),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

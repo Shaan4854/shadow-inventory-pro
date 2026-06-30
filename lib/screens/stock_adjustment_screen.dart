@@ -24,7 +24,13 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
   String _adjustmentType = 'Addition';
   String _reasonCategory = 'Manual Correction';
 
-  final List<String> _reasons = ['Damaged', 'Expired', 'Lost', 'Manual Correction', 'Other'];
+  final List<String> _reasons = [
+    'Damaged',
+    'Expired',
+    'Lost',
+    'Manual Correction',
+    'Other',
+  ];
 
   @override
   void initState() {
@@ -41,20 +47,23 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
 
   Future<void> _saveAdjustment() async {
     if (_selectedProduct == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a product.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Select a product.')));
       return;
     }
 
     final int? quantity = int.tryParse(_quantityController.text);
     if (quantity == null || quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid quantity.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a valid quantity.')),);
       return;
     }
 
     int change = _adjustmentType == 'Addition' ? quantity : -quantity;
 
     if (_selectedProduct!.stock + change < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stock cannot go below zero.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Stock cannot go below zero.')),);
       return;
     }
 
@@ -92,22 +101,27 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
                 onPressed: _showProductPicker,
                 icon: const Icon(Icons.search_rounded),
                 label: const Text('SELECT PRODUCT'),
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                style:
+                    OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
               )
             else
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Text(_selectedProduct!.emoji, style: const TextStyle(fontSize: 32)),
-                title: Text(_selectedProduct!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('Current Stock: ${_selectedProduct!.stock} ${_selectedProduct!.unit}'),
-                trailing: TextButton(onPressed: _showProductPicker, child: const Text('Change')),
+                leading: Text(_selectedProduct!.emoji,
+                    style: const TextStyle(fontSize: 32),),
+                title: Text(_selectedProduct!.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),),
+                subtitle: Text(
+                    'Current Stock: ${_selectedProduct!.stock} ${_selectedProduct!.unit}',),
+                trailing: TextButton(
+                    onPressed: _showProductPicker, child: const Text('Change'),),
               ),
             const Divider(height: 40),
             Row(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _adjustmentType,
+                    initialValue: _adjustmentType,
                     items: ['Addition', 'Subtraction']
                         .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
@@ -127,8 +141,10 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
             ),
             SizedBox(height: AppConstants.spacing.lg),
             DropdownButtonFormField<String>(
-              value: _reasonCategory,
-              items: _reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              initialValue: _reasonCategory,
+              items: _reasons
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
               onChanged: (v) => setState(() => _reasonCategory = v!),
               decoration: const InputDecoration(labelText: 'Reason Category'),
             ),
@@ -144,8 +160,10 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
             SizedBox(height: AppConstants.spacing.xxl),
             FilledButton(
               onPressed: _saveAdjustment,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-              child: const Text('SAVE ADJUSTMENT', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),),
+              child: const Text('SAVE ADJUSTMENT',
+                  style: TextStyle(fontWeight: FontWeight.bold),),
             ),
           ],
         ),
@@ -159,9 +177,11 @@ class _StockAdjustmentScreenState extends State<StockAdjustmentScreen> {
       isScrollControlled: true,
       backgroundColor: AppConstants.colors.background,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radii.sheet)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radii.sheet),),
       ),
-      builder: (_) => _ProductPicker(onSelected: (p) => setState(() => _selectedProduct = p)),
+      builder: (_) => _ProductPicker(
+          onSelected: (p) => setState(() => _selectedProduct = p),),
     );
   }
 }
