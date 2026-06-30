@@ -8,12 +8,16 @@ class SearchBarWidget extends StatelessWidget {
   const SearchBarWidget({
     required this.onChanged,
     this.controller,
+    this.focusNode,
     this.hintText = 'Search items...',
     super.key,
   });
 
   /// Optional controller owned by the parent.
   final TextEditingController? controller;
+
+  /// Optional focus node to control autofocus.
+  final FocusNode? focusNode;
 
   /// Called whenever the search text changes.
   final ValueChanged<String> onChanged;
@@ -25,7 +29,9 @@ class SearchBarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       onChanged: onChanged,
+      autofocus: false,
       textInputAction: TextInputAction.search,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: AppConstants.colors.textPrimary,

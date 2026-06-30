@@ -26,10 +26,12 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   Timer? _bannerTimer;
   String? _lastBannerMessage;
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void dispose() {
     _bannerTimer?.cancel();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -61,7 +63,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 child: Column(
                   children: <Widget>[
-                    _InventoryHeader(provider: provider),
+                    _InventoryHeader(
+                      provider: provider,
+                      searchFocusNode: _searchFocusNode,
+                    ),
                     Expanded(child: _InventoryBody(provider: provider)),
                   ],
                 ),
@@ -126,9 +131,13 @@ class _BottomNav extends StatelessWidget {
 }
 
 class _InventoryHeader extends StatelessWidget {
-  const _InventoryHeader({required this.provider});
+  const _InventoryHeader({
+    required this.provider,
+    required this.searchFocusNode,
+  });
 
   final ProductProvider provider;
+  final FocusNode searchFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +159,10 @@ class _InventoryHeader extends StatelessWidget {
           SizedBox(height: AppConstants.spacing.lg),
           _QuickStatsGrid(provider: provider),
           SizedBox(height: AppConstants.spacing.lg),
-          SearchBarWidget(onChanged: provider.search),
+          SearchBarWidget(
+            onChanged: provider.search,
+            focusNode: searchFocusNode,
+          ),
           SizedBox(height: AppConstants.spacing.lg),
           CategoryFilterBar(
             selectedFilter: provider.selectedFilter,
