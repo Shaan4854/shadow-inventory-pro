@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/product.dart';
+import '../models/supplier.dart';
 import '../models/transaction.dart';
 import '../models/transaction_item.dart';
 import '../models/transaction_type.dart';
 import '../providers/product_provider.dart';
+import '../providers/supplier_provider.dart';
 import '../utils/app_constants.dart';
 import '../widgets/payment_summary.dart';
 import '../widgets/quantity_stepper.dart';
@@ -20,6 +22,7 @@ class PurchaseScreen extends StatefulWidget {
 
 class _PurchaseScreenState extends State<PurchaseScreen> {
   final List<TransactionItem> _items = [];
+  Supplier? _selectedSupplier;
   final TextEditingController _entityController =
       TextEditingController(text: 'Primary Supplier');
   final TextEditingController _notesController = TextEditingController();
@@ -27,6 +30,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       TextEditingController(text: '0');
   final TextEditingController _transportController =
       TextEditingController(text: '0');
+  String _paymentMethod = 'Cash';
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.total);
   double get _discount => double.tryParse(_discountController.text) ?? 0;
@@ -109,6 +113,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       discount: _discount,
       notes: _notesController.text,
       entityName: _entityController.text,
+      paymentMethod: _paymentMethod,
       createdAt: DateTime.now(),
       items: _items
           .map((item) => TransactionItem(
@@ -122,6 +127,15 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     );
 
     await context.read<ProductProvider>().addTransaction(transaction);
+
+    if (_paymentMethod == 'Credit' && _selectedSupplier != null) {
+      if (mounted) {
+        await context
+            .read<SupplierProvider>()
+            .updateSupplierBalance(_selectedSupplier!.id, _grandTotal);
+      }
+    }
+
     if (mounted) {
       Navigator.pop(context);
     }
@@ -152,8 +166,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   _SectionHeader(
                     title: 'Supplier Details',
                     trailing: TextButton(
-                      onPressed: () {},
-                      child: const Text('Change'),
+                      onPressed: () => _showSupplierPicker(context),
+                      child: const Text('Search'),
                     ),
                   ),
                   TextField(
@@ -161,6 +175,18 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Supplier Name',
                       prefixIcon: Icon(Icons.business_rounded),
+                    ),
+                  ),
+                  SizedBox(height: AppConstants.spacing.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: _paymentMethod,
+                    items: ['Cash', 'UPI', 'Card', 'Credit']
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _paymentMethod = v!),
+                    decoration: const InputDecoration(
+                      labelText: 'Payment Method',
+                      prefixIcon: Icon(Icons.payments_outlined),
                     ),
                   ),
                   SizedBox(height: AppConstants.spacing.lg),
@@ -249,6 +275,27 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       builder: (_) => _ProductPicker(onSelected: _addItem),
     );
   }
+
+  void _showSupplierPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppConstants.colors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppConstants.radii.sheet),
+        ),
+      ),
+      builder: (_) => _SupplierPicker(
+        onSelected: (supplier) {
+          setState(() {
+            _selectedSupplier = supplier;
+            _entityController.text = supplier.name;
+          });
+        },
+      ),
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -325,6 +372,60 @@ class _PurchaseItemTile extends StatelessWidget {
           QuantityStepper(
             value: item.quantity,
             onChanged: onQuantityChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SupplierPicker extends StatefulWidget {
+  const _SupplierPicker({required this.onSelected});
+  final ValueChanged<Supplier> onSelected;
+
+  @override
+  State<_SupplierPicker> createState() => _SupplierPickerState();
+}
+
+class _SupplierPickerState extends State<_SupplierPicker> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final suppliers = context.watch<SupplierProvider>().searchSuppliers(_query);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      padding: EdgeInsets.all(AppConstants.spacing.page),
+      child: Column(
+        children: [
+          TextField(
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Search supplier by name or phone...',
+              prefixIcon: Icon(Icons.search_rounded),
+            ),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+          SizedBox(height: AppConstants.spacing.md),
+          Expanded(
+            child: suppliers.isEmpty
+                ? const Center(child: Text('No suppliers found.'))
+                : ListView.builder(
+                    itemCount: suppliers.length,
+                    itemBuilder: (context, index) {
+                      final s = suppliers[index];
+                      return ListTile(
+                        leading: CircleAvatar(child: Text(s.name[0])),
+                        title: Text(s.name),
+                        subtitle: Text(s.mobile),
+                        onTap: () {
+                          widget.onSelected(s);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),

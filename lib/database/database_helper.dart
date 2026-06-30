@@ -6,6 +6,8 @@ import '../models/transaction.dart' as model;
 import '../models/transaction_item.dart';
 import '../models/transaction_type.dart';
 import '../models/stock_movement.dart';
+import '../models/customer.dart';
+import '../models/supplier.dart';
 
 /// Handles SQLite database setup, migrations, and low-level product CRUD.
 class DatabaseHelper {
@@ -15,13 +17,15 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String databaseName = 'shadow_inventory_pro.db';
-  static const int databaseVersion = 3;
+  static const int databaseVersion = 5;
 
   static const String productsTable = 'products';
   static const String categoriesTable = 'categories';
   static const String transactionsTable = 'transactions';
   static const String transactionItemsTable = 'transaction_items';
   static const String stockMovementsTable = 'stock_movements';
+  static const String customersTable = 'customers';
+  static const String suppliersTable = 'suppliers';
 
   sqlite.Database? _database;
 
@@ -58,6 +62,8 @@ class DatabaseHelper {
     await db.execute(_createTransactionsTableSql);
     await db.execute(_createTransactionItemsTableSql);
     await db.execute(_createStockMovementsTableSql);
+    await db.execute(_createCustomersTableSql);
+    await db.execute(_createSuppliersTableSql);
   }
 
   Future<void> _onUpgrade(
@@ -73,6 +79,12 @@ class DatabaseHelper {
       await db.execute(_createTransactionsTableSql);
       await db.execute(_createTransactionItemsTableSql);
       await db.execute(_createStockMovementsTableSql);
+    }
+    if (oldVersion < 4) {
+      await db.execute(_createCustomersTableSql);
+    }
+    if (oldVersion < 5) {
+      await db.execute(_createSuppliersTableSql);
     }
   }
 
@@ -140,6 +152,37 @@ CREATE TABLE $stockMovementsTable (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (product_id) REFERENCES $productsTable (id) ON DELETE CASCADE,
   FOREIGN KEY (transaction_id) REFERENCES $transactionsTable (id) ON DELETE CASCADE
+)
+''';
+
+  static const String _createCustomersTableSql = '''
+CREATE TABLE $customersTable (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  mobile TEXT NOT NULL,
+  email TEXT NOT NULL DEFAULT '',
+  address TEXT NOT NULL DEFAULT '',
+  gst_vat TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  outstanding_balance REAL NOT NULL DEFAULT 0.0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)
+''';
+
+  static const String _createSuppliersTableSql = '''
+CREATE TABLE $suppliersTable (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  contact_person TEXT NOT NULL DEFAULT '',
+  mobile TEXT NOT NULL,
+  email TEXT NOT NULL DEFAULT '',
+  address TEXT NOT NULL DEFAULT '',
+  gst_vat TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  outstanding_balance REAL NOT NULL DEFAULT 0.0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 )
 ''';
 
@@ -384,5 +427,83 @@ CREATE TABLE $stockMovementsTable (
               productEmoji: m['product_emoji'] as String?,
             ),)
         .toList();
+  }
+
+  // --- Customers ---
+
+  Future<List<Customer>> getCustomers() async {
+    final sqlite.Database db = await database;
+    final List<Map<String, Object?>> maps = await db.query(
+      customersTable,
+      orderBy: 'name ASC',
+    );
+    return maps.map(Customer.fromMap).toList();
+  }
+
+  Future<void> insertCustomer(Customer customer) async {
+    final sqlite.Database db = await database;
+    await db.insert(
+      customersTable,
+      customer.toMap(),
+      conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateCustomer(Customer customer) async {
+    final sqlite.Database db = await database;
+    await db.update(
+      customersTable,
+      customer.toMap(),
+      where: 'id = ?',
+      whereArgs: [customer.id],
+    );
+  }
+
+  Future<void> deleteCustomer(String id) async {
+    final sqlite.Database db = await database;
+    await db.delete(
+      customersTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // --- Suppliers ---
+
+  Future<List<Supplier>> getSuppliers() async {
+    final sqlite.Database db = await database;
+    final List<Map<String, Object?>> maps = await db.query(
+      suppliersTable,
+      orderBy: 'name ASC',
+    );
+    return maps.map(Supplier.fromMap).toList();
+  }
+
+  Future<void> insertSupplier(Supplier supplier) async {
+    final sqlite.Database db = await database;
+    await db.insert(
+      suppliersTable,
+      supplier.toMap(),
+      conflictAlgorithm: sqlite.ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateSupplier(Supplier supplier) async {
+    final sqlite.Database db = await database;
+    await db.update(
+      suppliersTable,
+      supplier.toMap(),
+      where: 'id = ?',
+      whereArgs: [supplier.id],
+    );
+  }
+
+  Future<void> deleteSupplier(String id) async {
+    final sqlite.Database db = await database;
+    await db.delete(
+      suppliersTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

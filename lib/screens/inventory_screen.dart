@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../models/product.dart';
 import '../providers/product_provider.dart';
+import '../providers/customer_provider.dart';
+import '../providers/supplier_provider.dart';
 import '../utils/app_constants.dart';
 import '../utils/app_routes.dart';
 import '../utils/sort_type.dart';
@@ -176,6 +178,22 @@ class _BottomNav extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.people_outline_rounded),
+              title: const Text('Customers'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.customers);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.business_rounded),
+              title: const Text('Suppliers'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.suppliers);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.history_rounded),
               title: const Text('Inventory Timeline'),
@@ -450,6 +468,9 @@ class _QuickStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final customerProvider = context.watch<CustomerProvider>();
+    final supplierProvider = context.watch<SupplierProvider>();
+
     return Row(
       children: <Widget>[
         Expanded(
@@ -472,19 +493,19 @@ class _QuickStatsGrid extends StatelessWidget {
         SizedBox(width: AppConstants.spacing.md),
         Expanded(
           child: _QuickStatCard(
-            label: 'Categories',
-            value: '${provider.categories.length}',
+            label: 'Customers',
+            value: '${customerProvider.customers.length}',
             color: AppConstants.colors.blue,
-            icon: Icons.category_outlined,
+            icon: Icons.people_outline,
           ),
         ),
         SizedBox(width: AppConstants.spacing.md),
         Expanded(
           child: _QuickStatCard(
             label: 'Suppliers',
-            value: '1',
+            value: '${supplierProvider.suppliers.length}',
             color: AppConstants.colors.yellow,
-            icon: Icons.people_outline,
+            icon: Icons.business_rounded,
           ),
         ),
       ],

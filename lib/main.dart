@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/product_provider.dart';
+import 'providers/customer_provider.dart';
+import 'providers/supplier_provider.dart';
 import 'repositories/sqlite_product_repository.dart';
+import 'repositories/sqlite_customer_repository.dart';
+import 'repositories/sqlite_supplier_repository.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 
@@ -16,10 +20,24 @@ class ShadowInventoryProApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<ProductProvider>(
-      create: (_) => ProductProvider(
-        productRepository: SQLiteProductRepository(),
-      )..loadProducts(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ProductProvider>(
+          create: (_) => ProductProvider(
+            productRepository: SQLiteProductRepository(),
+          )..loadProducts(),
+        ),
+        ChangeNotifierProvider<CustomerProvider>(
+          create: (_) => CustomerProvider(
+            customerRepository: SQLiteCustomerRepository(),
+          )..loadCustomers(),
+        ),
+        ChangeNotifierProvider<SupplierProvider>(
+          create: (_) => SupplierProvider(
+            supplierRepository: SQLiteSupplierRepository(),
+          )..loadSuppliers(),
+        ),
+      ],
       child: MaterialApp(
         title: 'Shadow Inventory Pro',
         debugShowCheckedModeBanner: false,

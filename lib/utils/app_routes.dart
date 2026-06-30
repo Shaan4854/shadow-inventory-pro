@@ -14,6 +14,8 @@ import '../screens/stock_history_screen.dart';
 import '../screens/timeline_screen.dart';
 import '../screens/transaction_details_screen.dart';
 import '../screens/transactions_screen.dart';
+import '../screens/customer_list_screen.dart';
+import '../screens/supplier_list_screen.dart';
 
 /// Named routes for the app shell.
 abstract final class AppRoutes {
@@ -31,6 +33,8 @@ abstract final class AppRoutes {
   static const String timeline = '/timeline';
   static const String transactionDetails = '/transaction-details';
   static const String transactions = '/transactions';
+  static const String customers = '/customers';
+  static const String suppliers = '/suppliers';
 
   static Route<void> onGenerateRoute(RouteSettings settings) {
     return switch (settings.name) {
@@ -82,6 +86,14 @@ abstract final class AppRoutes {
       transactions => MaterialPageRoute<void>(
           settings: settings,
           builder: (_) => const TransactionsScreen(),
+        ),
+      customers => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const CustomerListScreen(),
+        ),
+      suppliers => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const SupplierListScreen(),
         ),
       _ => MaterialPageRoute<void>(
           settings: settings,

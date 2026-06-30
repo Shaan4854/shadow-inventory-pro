@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/product.dart';
+import '../models/customer.dart';
 import '../models/transaction.dart';
 import '../models/transaction_item.dart';
 import '../models/transaction_type.dart';
 import '../providers/product_provider.dart';
+import '../providers/customer_provider.dart';
 import '../utils/app_constants.dart';
 import '../widgets/payment_summary.dart';
 import '../widgets/quantity_stepper.dart';
@@ -20,6 +22,7 @@ class PosScreen extends StatefulWidget {
 
 class _PosScreenState extends State<PosScreen> {
   final List<TransactionItem> _cart = [];
+  Customer? _selectedCustomer;
   final TextEditingController _customerController =
       TextEditingController(text: 'Walk-in Customer');
   final TextEditingController _notesController = TextEditingController();
@@ -147,6 +150,15 @@ class _PosScreenState extends State<PosScreen> {
     );
 
     await context.read<ProductProvider>().addTransaction(transaction);
+
+    if (_paymentMethod == 'Credit' && _selectedCustomer != null) {
+      if (mounted) {
+        await context
+            .read<CustomerProvider>()
+            .updateCustomerBalance(_selectedCustomer!.id, _grandTotal);
+      }
+    }
+
     if (mounted) {
       Navigator.pop(context);
     }
@@ -188,9 +200,13 @@ class _PosScreenState extends State<PosScreen> {
                   const _SectionHeader(title: 'Transaction Details'),
                   TextField(
                     controller: _customerController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Customer Name',
-                      prefixIcon: Icon(Icons.person_outline_rounded),
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.person_search_rounded),
+                        onPressed: () => _showCustomerPicker(context),
+                      ),
                     ),
                   ),
                   SizedBox(height: AppConstants.spacing.md),
@@ -259,6 +275,26 @@ class _PosScreenState extends State<PosScreen> {
             top: Radius.circular(AppConstants.radii.sheet),),
       ),
       builder: (_) => _ProductPicker(onSelected: _addToCart),
+    );
+  }
+
+  void _showCustomerPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppConstants.colors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radii.sheet),),
+      ),
+      builder: (_) => _CustomerPicker(
+        onSelected: (customer) {
+          setState(() {
+            _selectedCustomer = customer;
+            _customerController.text = customer.name;
+          });
+        },
+      ),
     );
   }
 }
@@ -464,6 +500,60 @@ class _ProductPickerState extends State<_ProductPicker> {
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerPicker extends StatefulWidget {
+  const _CustomerPicker({required this.onSelected});
+  final ValueChanged<Customer> onSelected;
+
+  @override
+  State<_CustomerPicker> createState() => _CustomerPickerState();
+}
+
+class _CustomerPickerState extends State<_CustomerPicker> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final customers = context.watch<CustomerProvider>().searchCustomers(_query);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      padding: EdgeInsets.all(AppConstants.spacing.page),
+      child: Column(
+        children: [
+          TextField(
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Search customer by name or phone...',
+              prefixIcon: Icon(Icons.person_search_rounded),
+            ),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+          SizedBox(height: AppConstants.spacing.md),
+          Expanded(
+            child: customers.isEmpty
+                ? const Center(child: Text('No customers found.'))
+                : ListView.builder(
+                    itemCount: customers.length,
+                    itemBuilder: (context, index) {
+                      final c = customers[index];
+                      return ListTile(
+                        leading: CircleAvatar(child: Text(c.name[0])),
+                        title: Text(c.name),
+                        subtitle: Text(c.mobile),
+                        onTap: () {
+                          widget.onSelected(c);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
