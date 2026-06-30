@@ -125,7 +125,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                 _isEditMode ? 'Edit Item' : 'Add Item',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppConstants.colors.gold,
+                      color: AppConstants.colors.primary,
                     ),
               ),
             ),
@@ -636,7 +636,7 @@ class _CategoryDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       dropdownColor: AppConstants.colors.surface,
       decoration: const InputDecoration(labelText: 'Category'),
@@ -668,9 +668,9 @@ class _ProfitPreview extends StatelessWidget {
         vertical: AppConstants.spacing.md,
       ),
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.13),
+        color: accentColor.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(AppConstants.radii.md),
-        border: Border.all(color: accentColor.withOpacity(0.24)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.24)),
       ),
       child: Row(
         children: <Widget>[
@@ -716,8 +716,8 @@ class _SaveButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: <Color>[
-            AppConstants.colors.gold,
-            AppConstants.colors.goldDark,
+            AppConstants.colors.primary,
+            AppConstants.colors.primaryDark,
           ],
         ),
         borderRadius: BorderRadius.circular(AppConstants.radii.lg),

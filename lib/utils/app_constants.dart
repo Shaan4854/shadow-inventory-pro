@@ -47,26 +47,33 @@ class AppColors {
   const AppColors();
 
   final Color background = const Color(0xFF0A0A0F);
-  final Color backgroundAlt = const Color(0xFF111118);
-  final Color surface = const Color(0xFF1A1A24);
-  final Color surfaceHigh = const Color(0xFF22222F);
-  final Color border = const Color(0xFF2A2A38);
+  final Color backgroundAlt = const Color(0xFF12121A);
+  final Color surface = const Color(0xFF161622);
+  final Color surfaceHigh = const Color(0xFF1E1E2E);
+  final Color border = const Color(0xFF242435);
 
-  final Color gold = const Color(0xFFF5C842);
-  final Color goldDark = const Color(0xFFE0B030);
-  final Color goldLight = const Color(0xFFFFF3B0);
+  final Color primary = const Color(0xFF6366F1);
+  final Color primaryDark = const Color(0xFF4F46E5);
+  final Color primaryLight = const Color(0xFF818CF8);
 
-  final Color blue = const Color(0xFF4A9EFF);
-  final Color blueDark = const Color(0xFF1A6FD4);
-  final Color red = const Color(0xFFFF4D4D);
-  final Color green = const Color(0xFF3DDB6A);
-  final Color yellow = const Color(0xFFFFE066);
+  final Color blue = const Color(0xFF3B82F6);
+  final Color red = const Color(0xFFEF4444);
+  final Color green = const Color(0xFF10B981);
+  final Color yellow = const Color(0xFFF59E0B);
+  final Color purple = const Color(0xFF8B5CF6);
+  final Color orange = const Color(0xFFF97316);
 
-  final Color textPrimary = const Color(0xFFF0F0F0);
-  final Color textSecondary = const Color(0xFFA0A0B0);
-  final Color textMuted = const Color(0xFF6A6A80);
-  final Color onAccent = Colors.black;
+  final Color textPrimary = const Color(0xFFFFFFFF);
+  final Color textSecondary = const Color(0xFF94A3B8);
+  final Color textMuted = const Color(0xFF64748B);
+  final Color onAccent = Colors.white;
   final Color onDanger = Colors.white;
+
+  final LinearGradient dashboardGradient = const LinearGradient(
+    colors: <Color>[Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 class AppSpacing {

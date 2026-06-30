@@ -10,8 +10,8 @@ abstract final class AppTheme {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: ColorScheme.dark(
-      primary: AppConstants.colors.gold,
-      onPrimary: Colors.black,
+      primary: AppConstants.colors.primary,
+      onPrimary: Colors.white,
       secondary: AppConstants.colors.blue,
       onSecondary: AppConstants.colors.textPrimary,
       error: AppConstants.colors.red,
@@ -36,8 +36,8 @@ abstract final class AppTheme {
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: AppConstants.colors.gold,
-      foregroundColor: Colors.black,
+      backgroundColor: AppConstants.colors.primary,
+      foregroundColor: Colors.white,
       elevation: 8,
       shape: const CircleBorder(),
     ),
@@ -46,10 +46,10 @@ abstract final class AppTheme {
       fillColor: AppConstants.colors.surface,
       hintStyle: TextStyle(color: AppConstants.colors.textMuted),
       labelStyle: TextStyle(color: AppConstants.colors.textSecondary),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: _inputBorder(AppConstants.colors.border),
       enabledBorder: _inputBorder(AppConstants.colors.border),
-      focusedBorder: _inputBorder(AppConstants.colors.gold),
+      focusedBorder: _inputBorder(AppConstants.colors.primary),
     ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: AppConstants.colors.backgroundAlt,
@@ -63,10 +63,10 @@ abstract final class AppTheme {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: AppConstants.colors.surface,
-      selectedColor: AppConstants.colors.gold,
+      selectedColor: AppConstants.colors.primary,
       disabledColor: AppConstants.colors.surfaceHigh,
       labelStyle: TextStyle(color: AppConstants.colors.textSecondary),
-      secondaryLabelStyle: const TextStyle(color: Colors.black),
+      secondaryLabelStyle: const TextStyle(color: Colors.white),
       side: BorderSide(color: AppConstants.colors.border),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.radii.pill),

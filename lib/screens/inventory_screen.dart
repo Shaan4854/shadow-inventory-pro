@@ -6,12 +6,13 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
 import '../utils/app_constants.dart';
+import '../utils/app_routes.dart';
 import '../widgets/alert_banner.dart';
 import '../widgets/category_filter_bar.dart';
 import '../widgets/empty_inventory.dart';
 import '../widgets/product_card.dart';
+import '../widgets/product_form_sheet.dart';
 import '../widgets/search_bar_widget.dart';
-import '../widgets/stat_pill.dart';
 
 /// Main inventory dashboard assembled from reusable Shadow widgets.
 class InventoryScreen extends StatefulWidget {
@@ -44,6 +45,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return Scaffold(
       backgroundColor: AppConstants.colors.background,
+      bottomNavigationBar: _BottomNav(),
       floatingActionButton: FloatingActionButton(
         onPressed: _handleAddPressed,
         tooltip: 'Add item',
@@ -99,7 +101,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _handleAddPressed() {
-    // TODO: Open add product bottom sheet in Phase 6.
+    ProductFormSheet.show(context, provider: context.read<ProductProvider>());
+  }
+}
+
+class _BottomNav extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: AppConstants.colors.background,
+      selectedItemColor: AppConstants.colors.primary,
+      unselectedItemColor: AppConstants.colors.textMuted,
+      currentIndex: 0,
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Products'),
+        BottomNavigationBarItem(icon: Icon(Icons.sell_outlined), label: 'Sell'),
+        BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Purchase'),
+        BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
+      ],
+    );
   }
 }
 
@@ -124,13 +146,195 @@ class _InventoryHeader extends StatelessWidget {
         children: <Widget>[
           const _TitleRow(),
           SizedBox(height: AppConstants.spacing.lg),
-          _StatsRow(provider: provider),
+          _SummaryCard(provider: provider),
+          SizedBox(height: AppConstants.spacing.lg),
+          _QuickStatsGrid(provider: provider),
           SizedBox(height: AppConstants.spacing.lg),
           SearchBarWidget(onChanged: provider.search),
           SizedBox(height: AppConstants.spacing.lg),
           CategoryFilterBar(
             selectedFilter: provider.selectedFilter,
             onFilterSelected: provider.setFilter,
+          ),
+          SizedBox(height: AppConstants.spacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                'Recent Products',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              TextButton(
+                onPressed: () {},
+                child: Text(
+                  'View All',
+                  style: TextStyle(color: AppConstants.colors.primary),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.provider});
+
+  final ProductProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(AppConstants.spacing.page),
+      decoration: BoxDecoration(
+        gradient: AppConstants.colors.dashboardGradient,
+        borderRadius: BorderRadius.circular(AppConstants.radii.xl),
+      ),
+      child: Column(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              _SummaryItem(label: 'Total Products', value: '${provider.totalItems}'),
+              _SummaryItem(label: 'Total Stock', value: '${provider.totalItems * 20}'), // Mock multiplier
+            ],
+          ),
+          SizedBox(height: AppConstants.spacing.lg),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              _SummaryItem(
+                label: 'Inventory Value',
+                value: '${AppConstants.currencySymbol}${provider.totalBuyValue.round()}',
+              ),
+              _SummaryItem(
+                label: 'Today\'s Profit',
+                value: '${AppConstants.currencySymbol}${provider.totalProfit.round()}',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  const _SummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickStatsGrid extends StatelessWidget {
+  const _QuickStatsGrid({required this.provider});
+
+  final ProductProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _QuickStatCard(
+            label: 'Low Stock',
+            value: '${provider.lowStockCount}',
+            color: AppConstants.colors.red,
+            icon: Icons.warning_amber_rounded,
+          ),
+        ),
+        SizedBox(width: AppConstants.spacing.md),
+        Expanded(
+          child: _QuickStatCard(
+            label: 'Out of Stock',
+            value: '${provider.outOfStockCount}',
+            color: AppConstants.colors.orange,
+            icon: Icons.error_outline_rounded,
+          ),
+        ),
+        SizedBox(width: AppConstants.spacing.md),
+        Expanded(
+          child: _QuickStatCard(
+            label: 'Categories',
+            value: '32',
+            color: AppConstants.colors.blue,
+            icon: Icons.category_outlined,
+          ),
+        ),
+        SizedBox(width: AppConstants.spacing.md),
+        Expanded(
+          child: _QuickStatCard(
+            label: 'Suppliers',
+            value: '15',
+            color: AppConstants.colors.yellow,
+            icon: Icons.people_outline,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickStatCard extends StatelessWidget {
+  const _QuickStatCard({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(AppConstants.spacing.md),
+      decoration: BoxDecoration(
+        color: AppConstants.colors.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+        border: Border.all(color: AppConstants.colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: color, size: 20),
+          SizedBox(height: AppConstants.spacing.xs),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 10),
           ),
         ],
       ),
@@ -145,90 +349,37 @@ class _TitleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Text(
-          '🌑',
-          style: Theme.of(context).textTheme.titleLarge,
+        CircleAvatar(
+          backgroundColor: AppConstants.colors.surface,
+          radius: 18,
+          child: const Text('👤', style: TextStyle(fontSize: 18)),
         ),
         SizedBox(width: AppConstants.spacing.md),
         Expanded(
-          child: ShaderMask(
-            shaderCallback: (Rect bounds) {
-              return LinearGradient(
-                colors: <Color>[
-                  AppConstants.colors.gold,
-                  AppConstants.colors.goldLight,
-                ],
-              ).createShader(bounds);
-            },
-            child: Text(
-              AppConstants.appName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppConstants.colors.onDanger,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-        ),
-        SizedBox(width: AppConstants.spacing.md),
-        Text(
-          AppConstants.appSubtitle,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppConstants.colors.textMuted,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Good Morning, Shadow! 👋',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppConstants.colors.textMuted,
+                    ),
               ),
+              Text(
+                AppConstants.appName,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.notifications_none_rounded),
         ),
       ],
     );
-  }
-}
-
-class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.provider});
-
-  final ProductProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: StatPill(
-            value: '${provider.totalItems}',
-            label: 'Items',
-            accentColor: AppConstants.colors.blue,
-          ),
-        ),
-        SizedBox(width: AppConstants.spacing.sm),
-        Expanded(
-          child: StatPill(
-            value: _money(provider.totalBuyValue),
-            label: 'Buy Val',
-            accentColor: AppConstants.colors.red,
-          ),
-        ),
-        SizedBox(width: AppConstants.spacing.sm),
-        Expanded(
-          child: StatPill(
-            value: _money(provider.totalProfit),
-            label: 'Profit',
-            accentColor: AppConstants.colors.green,
-          ),
-        ),
-        SizedBox(width: AppConstants.spacing.sm),
-        Expanded(
-          child: StatPill(
-            value: '${provider.outOfStockCount}',
-            label: 'Out',
-            accentColor: AppConstants.colors.yellow,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _money(double value) {
-    return '${AppConstants.currencySymbol}${value.round()}';
   }
 }
 
@@ -272,34 +423,33 @@ class _ProductList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(
-        AppConstants.spacing.xxl,
-        AppConstants.spacing.lg,
-        AppConstants.spacing.xxl,
+        AppConstants.spacing.page,
+        AppConstants.spacing.md,
+        AppConstants.spacing.page,
         AppConstants.spacing.bottomListPadding,
       ),
       itemCount: products.length,
-      separatorBuilder: (_, __) => SizedBox(height: AppConstants.spacing.md),
+      separatorBuilder: (_, __) => const SizedBox(height: 1),
       itemBuilder: (BuildContext context, int index) {
         final Product product = products[index];
 
-        return AnimatedContainer(
-          duration: AppConstants.durations.fast,
-          curve: Curves.easeOut,
-          child: ProductCard(
-            product: product,
-            profit: provider.unitProfit(product),
-            isLowStock: provider.isLowStock(product),
-            isOutOfStock: provider.isOutOfStock(product),
-            onEdit: () => _handleEdit(product),
-            onDelete: () => _confirmDelete(context, product),
-          ),
+        return ProductCard(
+          product: product,
+          profit: provider.unitProfit(product),
+          isLowStock: provider.isLowStock(product),
+          isOutOfStock: provider.isOutOfStock(product),
+          onEdit: () => _handleDetails(context, product),
+          onDelete: () => _confirmDelete(context, product),
         );
       },
     );
   }
 
-  void _handleEdit(Product product) {
-    // TODO: Open edit product bottom sheet in Phase 6.
+  void _handleDetails(BuildContext context, Product product) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.productDetails,
+      arguments: product,
+    );
   }
 
   Future<void> _confirmDelete(BuildContext context, Product product) async {

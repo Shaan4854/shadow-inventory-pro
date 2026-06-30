@@ -37,10 +37,10 @@ class CategoryFilterBar extends StatelessWidget {
             showCheckmark: false,
             visualDensity: VisualDensity.compact,
             backgroundColor: AppConstants.colors.surface,
-            selectedColor: AppConstants.colors.gold,
+            selectedColor: AppConstants.colors.primary,
             side: BorderSide(
               color: isSelected
-                  ? AppConstants.colors.gold
+                  ? AppConstants.colors.primary
                   : AppConstants.colors.border,
             ),
             labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(

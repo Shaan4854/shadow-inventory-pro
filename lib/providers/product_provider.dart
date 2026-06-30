@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -143,17 +144,22 @@ class ProductProvider extends ChangeNotifier {
     _clearErrorSilently();
 
     try {
-      await _productRepository.updateProduct(product);
       final int index = _products.indexWhere(
         (Product item) => item.id == product.id,
       );
 
-      if (index == -1) {
-        _products.insert(0, product);
-      } else {
+      if (index != -1) {
+        final Product oldProduct = _products[index];
+        if (oldProduct.imagePath != null &&
+            oldProduct.imagePath != product.imagePath) {
+          _deleteImageFile(oldProduct.imagePath);
+        }
         _products[index] = product;
+      } else {
+        _products.insert(0, product);
       }
 
+      await _productRepository.updateProduct(product);
       _setLowStockAlertIfNeeded(product);
       notifyListeners();
     } catch (error) {
@@ -166,11 +172,37 @@ class ProductProvider extends ChangeNotifier {
     _clearErrorSilently();
 
     try {
+      final int index = _products.indexWhere(
+        (Product product) => product.id == productId,
+      );
+
+      if (index != -1) {
+        final Product product = _products[index];
+        if (product.imagePath != null) {
+          _deleteImageFile(product.imagePath);
+        }
+        _products.removeAt(index);
+      }
+
       await _productRepository.deleteProduct(productId);
-      _products.removeWhere((Product product) => product.id == productId);
       notifyListeners();
     } catch (error) {
       _setError('Unable to delete product.');
+    }
+  }
+
+  void _deleteImageFile(String? path) {
+    if (path == null || path.isEmpty) {
+      return;
+    }
+
+    try {
+      final File file = File(path);
+      if (file.existsSync()) {
+        file.deleteSync();
+      }
+    } catch (error) {
+      debugPrint('Error deleting image file: $error');
     }
   }
 
@@ -202,6 +234,12 @@ class ProductProvider extends ChangeNotifier {
     }
 
     _alertMessage = null;
+    notifyListeners();
+  }
+
+  /// Sets a new alert message and notifies listeners.
+  void showAlert(String message) {
+    _alertMessage = message;
     notifyListeners();
   }
 

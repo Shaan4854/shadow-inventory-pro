@@ -50,7 +50,7 @@ class AlertBanner extends StatelessWidget {
             color: backgroundColor,
             boxShadow: <BoxShadow>[
               BoxShadow(
-                color: backgroundColor.withOpacity(0.31),
+                color: backgroundColor.withValues(alpha: 0.31),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
@@ -90,7 +90,7 @@ class AlertBanner extends StatelessWidget {
   Color _backgroundColor() {
     return switch (type) {
       AlertBannerType.success => AppConstants.colors.green,
-      AlertBannerType.warning => AppConstants.colors.gold,
+      AlertBannerType.warning => AppConstants.colors.yellow,
       AlertBannerType.error => AppConstants.colors.red,
     };
   }
