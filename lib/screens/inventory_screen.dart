@@ -138,7 +138,7 @@ class _BottomNav extends StatelessWidget {
             Navigator.pushReplacementNamed(context, AppRoutes.inventory);
             break;
           case 1:
-            // Stay or go to products list
+            Navigator.pushNamed(context, AppRoutes.productList);
             break;
           case 2:
             Navigator.pushNamed(context, AppRoutes.pos);
@@ -168,8 +168,10 @@ class _BottomNav extends StatelessWidget {
       context: context,
       backgroundColor: AppConstants.colors.background,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppConstants.radii.sheet),),),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppConstants.radii.sheet),
+        ),
+      ),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -180,6 +182,14 @@ class _BottomNav extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, AppRoutes.timeline);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_rounded),
+              title: const Text('Transaction History'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.transactions);
               },
             ),
             ListTile(
@@ -269,7 +279,8 @@ class _InventoryHeader extends StatelessWidget {
                     tooltip: 'Sort Products',
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRoutes.productList),
                     child: Text(
                       'View All',
                       style: TextStyle(color: AppConstants.colors.primary),
