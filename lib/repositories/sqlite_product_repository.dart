@@ -1,5 +1,7 @@
 import '../database/database_helper.dart';
 import '../models/product.dart';
+import '../models/stock_movement.dart';
+import '../models/transaction.dart';
 import '../utils/seed_data.dart';
 import 'product_repository.dart';
 
@@ -65,5 +67,25 @@ class SQLiteProductRepository implements ProductRepository {
     for (final String category in categories) {
       await _databaseHelper.insertCategory(category);
     }
+  }
+
+  @override
+  Future<void> addTransaction(Transaction transaction) async {
+    await _databaseHelper.insertTransaction(transaction);
+  }
+
+  @override
+  Future<List<Transaction>> getTransactions() async {
+    return _databaseHelper.getTransactions();
+  }
+
+  @override
+  Future<void> addStockMovement(StockMovement movement) async {
+    await _databaseHelper.insertStockMovement(movement);
+  }
+
+  @override
+  Future<List<StockMovement>> getStockMovements({String? productId}) async {
+    return _databaseHelper.getStockMovements(productId: productId);
   }
 }

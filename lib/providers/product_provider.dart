@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
 import '../repositories/product_repository.dart';
+import '../models/stock_movement.dart';
+import '../models/transaction.dart';
 import '../utils/app_constants.dart';
 import '../utils/filter_type.dart';
 import '../utils/sort_type.dart';
@@ -20,6 +22,9 @@ class ProductProvider extends ChangeNotifier {
 
   final List<Product> _products = <Product>[];
   final List<String> _categories = <String>[];
+  final List<Transaction> _transactions = <Transaction>[];
+  final List<StockMovement> _movements = <StockMovement>[];
+
   FilterType _selectedFilter = FilterType.all;
   SortType _selectedSort = SortType.newest;
   String _searchQuery = '';
@@ -35,6 +40,16 @@ class ProductProvider extends ChangeNotifier {
   /// All dynamic categories loaded from persistence.
   UnmodifiableListView<String> get categories {
     return UnmodifiableListView<String>(_categories);
+  }
+
+  /// All transactions loaded from persistence.
+  UnmodifiableListView<Transaction> get transactions {
+    return UnmodifiableListView<Transaction>(_transactions);
+  }
+
+  /// All stock movements loaded from persistence.
+  UnmodifiableListView<StockMovement> get movements {
+    return UnmodifiableListView<StockMovement>(_movements);
   }
 
   /// Products after applying the current search query, selected filter, and sort.
@@ -74,6 +89,11 @@ class ProductProvider extends ChangeNotifier {
   /// Total number of products.
   int get totalItems => _products.length;
 
+  /// Total current stock quantity across all products.
+  int get totalStock {
+    return _products.fold<int>(0, (int total, Product product) => total + product.stock);
+  }
+
   /// Total current purchase value of stock.
   double get totalBuyValue {
     return _products.fold<double>(
@@ -96,6 +116,41 @@ class ProductProvider extends ChangeNotifier {
 
   /// Total projected profit for current stock.
   double get totalProfit => totalSellValue - totalBuyValue;
+
+  /// Total profit from transactions today.
+  double get todayProfit {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    return _transactions
+        .where((tx) => tx.createdAt.isAfter(today))
+        .where((tx) => tx.type == TransactionType.sale || tx.type == TransactionType.salesReturn)
+        .fold<double>(0, (sum, tx) {
+          double txProfit = 0;
+          for (var item in tx.items) {
+            final product = _products.firstWhere((p) => p.id == item.productId, orElse: () => _emptyProduct);
+            if (product.id.isNotEmpty) {
+              txProfit += (item.priceAtTime - product.buyPrice) * item.quantity;
+            }
+          }
+          if (tx.type == TransactionType.salesReturn) {
+            return sum - (txProfit - tx.discount);
+          }
+          return sum + (txProfit - tx.discount);
+        });
+  }
+
+  static final Product _emptyProduct = Product(
+    id: '',
+    name: '',
+    buyPrice: 0,
+    sellPrice: 0,
+    stock: 0,
+    alertThreshold: 0,
+    emoji: '',
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  );
 
   /// Number of products with zero stock.
   int get outOfStockCount {
@@ -122,23 +177,76 @@ class ProductProvider extends ChangeNotifier {
     return _isLowStock(product);
   }
 
-  /// Loads products and categories from the repository.
-  Future<void> loadProducts() async {
+  /// Loads products, categories, and transactions from the repository.
+  Future<void> loadAllData() async {
     _setLoading(true);
     _clearErrorSilently();
 
     try {
       await _productRepository.seedDatabaseIfEmpty();
-      final List<Product> loadedProducts =
-          await _productRepository.getProducts();
-      _replaceProducts(loadedProducts);
       
-      final List<String> loadedCategories = await _productRepository.getCategories();
+      final results = await Future.wait([
+        _productRepository.getProducts(),
+        _productRepository.getCategories(),
+        _productRepository.getTransactions(),
+        _productRepository.getStockMovements(),
+      ]);
+
+      _replaceProducts(results[0] as List<Product>);
+      
       _categories
         ..clear()
-        ..addAll(loadedCategories);
+        ..addAll(results[1] as List<String>);
+
+      _transactions
+        ..clear()
+        ..addAll(results[2] as List<Transaction>);
+
+      _movements
+        ..clear()
+        ..addAll(results[3] as List<StockMovement>);
+
     } catch (error) {
-      _setError('Unable to load products.');
+      _setError('Unable to load inventory data.');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Loads products and categories from the repository.
+  Future<void> loadProducts() async {
+    await loadAllData();
+  }
+
+  /// Adds a transaction and refreshes local state.
+  Future<void> addTransaction(Transaction transaction) async {
+    _setLoading(true);
+    _clearErrorSilently();
+
+    try {
+      await _productRepository.addTransaction(transaction);
+      // Reload everything to ensure stock and history are synced
+      await loadAllData();
+      _alertMessage = 'Transaction saved successfully.';
+    } catch (error) {
+      _setError('Unable to save transaction.');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Adds a stock movement (manual adjustment) and refreshes local state.
+  Future<void> addStockMovement(StockMovement movement) async {
+    _setLoading(true);
+    _clearErrorSilently();
+
+    try {
+      await _productRepository.addStockMovement(movement);
+      // Reload everything
+      await loadAllData();
+      _alertMessage = 'Stock adjusted successfully.';
+    } catch (error) {
+      _setError('Unable to adjust stock.');
     } finally {
       _setLoading(false);
     }

@@ -48,7 +48,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return Scaffold(
       backgroundColor: AppConstants.colors.background,
-      bottomNavigationBar: _BottomNav(),
+      bottomNavigationBar: const _BottomNav(currentIndex: 0),
       floatingActionButton: FloatingActionButton(
         onPressed: _handleAddPressed,
         tooltip: 'Add item',
@@ -119,6 +119,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
 }
 
 class _BottomNav extends StatelessWidget {
+  const _BottomNav({required this.currentIndex});
+  final int currentIndex;
+
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
@@ -126,7 +129,27 @@ class _BottomNav extends StatelessWidget {
       backgroundColor: AppConstants.colors.background,
       selectedItemColor: AppConstants.colors.primary,
       unselectedItemColor: AppConstants.colors.textMuted,
-      currentIndex: 0,
+      currentIndex: currentIndex,
+      onTap: (index) {
+        if (index == currentIndex) return;
+        switch (index) {
+          case 0:
+            Navigator.pushReplacementNamed(context, AppRoutes.inventory);
+            break;
+          case 1:
+            // Stay or go to products list
+            break;
+          case 2:
+            Navigator.pushNamed(context, AppRoutes.pos);
+            break;
+          case 3:
+            Navigator.pushNamed(context, AppRoutes.purchase);
+            break;
+          case 4:
+            _showMoreMenu(context);
+            break;
+        }
+      },
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Products'),
@@ -134,6 +157,54 @@ class _BottomNav extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Purchase'),
         BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
       ],
+    );
+  }
+
+  void _showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppConstants.colors.background,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radii.sheet))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.history_rounded),
+              title: const Text('Inventory Timeline'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.timeline);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment_return_outlined),
+              title: const Text('Sales Return'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.salesReturn);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment_return_rounded),
+              title: const Text('Purchase Return'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.purchaseReturn);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.tune_rounded),
+              title: const Text('Stock Adjustment'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.stockAdjustment);
+              },
+            ),
+            SizedBox(height: AppConstants.spacing.md),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -297,7 +368,7 @@ class _SummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               _SummaryItem(label: 'Total Products', value: '${provider.totalItems}'),
-              _SummaryItem(label: 'Total Stock', value: '${provider.totalItems * 20}'), // Mock multiplier
+              _SummaryItem(label: 'Total Stock', value: '${provider.totalStock}'),
             ],
           ),
           SizedBox(height: AppConstants.spacing.lg),
@@ -310,7 +381,7 @@ class _SummaryCard extends StatelessWidget {
               ),
               _SummaryItem(
                 label: 'Today\'s Profit',
-                value: '${AppConstants.currencySymbol}${provider.totalProfit.round()}',
+                value: '${AppConstants.currencySymbol}${provider.todayProfit.round()}',
               ),
             ],
           ),
@@ -387,7 +458,7 @@ class _QuickStatsGrid extends StatelessWidget {
         Expanded(
           child: _QuickStatCard(
             label: 'Suppliers',
-            value: '15',
+            value: '1',
             color: AppConstants.colors.yellow,
             icon: Icons.people_outline,
           ),

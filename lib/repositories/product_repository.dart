@@ -1,4 +1,6 @@
 import '../models/product.dart';
+import '../models/stock_movement.dart';
+import '../models/transaction.dart';
 
 /// Persistence boundary for inventory products.
 ///
@@ -28,4 +30,18 @@ abstract class ProductRepository {
 
   /// Adds starter products only when the product table is empty.
   Future<void> seedDatabaseIfEmpty();
+
+  // --- Transaction & Movement Methods ---
+
+  /// Persists a complete transaction and updates product stock levels.
+  Future<void> addTransaction(Transaction transaction);
+
+  /// Returns all transactions ordered by date descending.
+  Future<List<Transaction>> getTransactions();
+
+  /// Persists a manual stock adjustment.
+  Future<void> addStockMovement(StockMovement movement);
+
+  /// Returns stock history, optionally filtered by product.
+  Future<List<StockMovement>> getStockMovements({String? productId});
 }

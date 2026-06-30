@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/product_provider.dart';
 import '../utils/app_constants.dart';
+import '../utils/app_routes.dart';
 import '../widgets/product_form_sheet.dart';
 
 /// Deep dive screen for product information and history.
@@ -68,7 +69,11 @@ class ProductDetailsScreen extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: FilledButton(
-                    onPressed: () {},
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.stockHistory,
+                      arguments: product,
+                    ),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppConstants.colors.surfaceHigh,
                     ),
@@ -78,14 +83,27 @@ class ProductDetailsScreen extends StatelessWidget {
                 SizedBox(width: AppConstants.spacing.md),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () {},
-                    child: const Text('More Details'),
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.stockAdjustment,
+                      arguments: product,
+                    ),
+                    child: const Text('Adjust Stock'),
                   ),
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Available in the next update.'),
+        duration: Duration(seconds: 2),
       ),
     );
   }

@@ -2,6 +2,10 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 import '../models/product.dart';
+import '../models/transaction.dart';
+import '../models/transaction_item.dart';
+import '../models/transaction_type.dart';
+import '../models/stock_movement.dart';
 
 /// Handles SQLite database setup, migrations, and low-level product CRUD.
 class DatabaseHelper {
@@ -11,10 +15,13 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String databaseName = 'shadow_inventory_pro.db';
-  static const int databaseVersion = 2;
+  static const int databaseVersion = 3;
 
   static const String productsTable = 'products';
   static const String categoriesTable = 'categories';
+  static const String transactionsTable = 'transactions';
+  static const String transactionItemsTable = 'transaction_items';
+  static const String stockMovementsTable = 'stock_movements';
 
   Database? _database;
 
@@ -48,6 +55,9 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     await db.execute(_createProductsTableSql);
     await db.execute(_createCategoriesTableSql);
+    await db.execute(_createTransactionsTableSql);
+    await db.execute(_createTransactionItemsTableSql);
+    await db.execute(_createStockMovementsTableSql);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -55,6 +65,11 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE $productsTable ADD COLUMN brand TEXT NOT NULL DEFAULT ""');
       await db.execute('ALTER TABLE $productsTable ADD COLUMN unit TEXT NOT NULL DEFAULT "pcs"');
       await db.execute(_createCategoriesTableSql);
+    }
+    if (oldVersion < 3) {
+      await db.execute(_createTransactionsTableSql);
+      await db.execute(_createTransactionItemsTableSql);
+      await db.execute(_createStockMovementsTableSql);
     }
   }
 
@@ -83,6 +98,45 @@ CREATE TABLE $productsTable (
 CREATE TABLE $categoriesTable (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE
+)
+''';
+
+  static const String _createTransactionsTableSql = '''
+CREATE TABLE $transactionsTable (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  total_amount REAL NOT NULL DEFAULT 0,
+  discount REAL NOT NULL DEFAULT 0,
+  notes TEXT NOT NULL DEFAULT '',
+  payment_method TEXT NOT NULL DEFAULT 'Cash',
+  entity_name TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+)
+''';
+
+  static const String _createTransactionItemsTableSql = '''
+CREATE TABLE $transactionItemsTable (
+  id TEXT PRIMARY KEY,
+  transaction_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  price_at_time REAL NOT NULL,
+  FOREIGN KEY (transaction_id) REFERENCES $transactionsTable (id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES $productsTable (id) ON DELETE CASCADE
+)
+''';
+
+  static const String _createStockMovementsTableSql = '''
+CREATE TABLE $stockMovementsTable (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  transaction_id TEXT,
+  type TEXT NOT NULL,
+  quantity_change INTEGER NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (product_id) REFERENCES $productsTable (id) ON DELETE CASCADE,
+  FOREIGN KEY (transaction_id) REFERENCES $transactionsTable (id) ON DELETE CASCADE
 )
 ''';
 
@@ -196,5 +250,119 @@ CREATE TABLE $categoriesTable (
 
     await db.close();
     _database = null;
+  }
+
+  // --- Transactions ---
+
+  Future<void> insertTransaction(Transaction transaction) async {
+    final Database db = await database;
+    await db.transaction((Transaction txn) async {
+      // 1. Insert Transaction
+      await txn.insert(transactionsTable, transaction.toMap());
+
+      // 2. Insert Transaction Items
+      for (final item in transaction.items) {
+        await txn.insert(transactionItemsTable, item.toMap());
+
+        // 3. Insert Stock Movement
+        int quantityChange;
+        switch (transaction.type) {
+          case TransactionType.purchase:
+          case TransactionType.salesReturn:
+            quantityChange = item.quantity;
+            break;
+          case TransactionType.sale:
+          case TransactionType.purchaseReturn:
+            quantityChange = -item.quantity;
+            break;
+          case TransactionType.adjustment:
+            quantityChange = item.quantity; // Adjustment model should define sign
+            break;
+        }
+
+        final String movementId = DateTime.now().microsecondsSinceEpoch.toString();
+        await txn.insert(stockMovementsTable, {
+          'id': movementId,
+          'product_id': item.productId,
+          'transaction_id': transaction.id,
+          'type': transaction.type.name,
+          'quantity_change': quantityChange,
+          'reason': transaction.notes,
+          'created_at': transaction.createdAt.millisecondsSinceEpoch,
+        });
+
+        // 4. Update Product Stock
+        await txn.rawUpdate(
+          'UPDATE $productsTable SET stock = stock + ?, updated_at = ? WHERE id = ?',
+          [quantityChange, transaction.createdAt.millisecondsSinceEpoch, item.productId],
+        );
+      }
+    });
+  }
+
+  Future<List<Transaction>> getTransactions() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> maps = await db.query(
+      transactionsTable,
+      orderBy: 'created_at DESC',
+    );
+
+    final List<Transaction> transactions = [];
+    for (final map in maps) {
+      final String transactionId = map['id'] as String;
+      final List<Map<String, Object?>> itemMaps = await db.rawQuery('''
+        SELECT ti.*, p.name as product_name, p.emoji as product_emoji, p.unit as product_unit
+        FROM $transactionItemsTable ti
+        JOIN $productsTable p ON ti.product_id = p.id
+        WHERE ti.transaction_id = ?
+      ''', [transactionId]);
+
+      final items = itemMaps.map((m) => TransactionItem.fromMap(
+        m,
+        productName: m['product_name'] as String?,
+        productEmoji: m['product_emoji'] as String?,
+        productUnit: m['product_unit'] as String?,
+      )).toList();
+
+      transactions.add(Transaction.fromMap(map, items: items));
+    }
+    return transactions;
+  }
+
+  // --- Stock Movements ---
+
+  Future<void> insertStockMovement(StockMovement movement) async {
+    final Database db = await database;
+    await db.transaction((Transaction txn) async {
+      await txn.insert(stockMovementsTable, movement.toMap());
+      await txn.rawUpdate(
+        'UPDATE $productsTable SET stock = stock + ?, updated_at = ? WHERE id = ?',
+        [movement.quantityChange, movement.createdAt.millisecondsSinceEpoch, movement.productId],
+      );
+    });
+  }
+
+  Future<List<StockMovement>> getStockMovements({String? productId}) async {
+    final Database db = await database;
+    String query = '''
+      SELECT sm.*, p.name as product_name, p.emoji as product_emoji
+      FROM $stockMovementsTable sm
+      JOIN $productsTable p ON sm.product_id = p.id
+    ''';
+    List<Object?> args = [];
+
+    if (productId != null) {
+      query += ' WHERE sm.product_id = ?';
+      args.add(productId);
+    }
+
+    query += ' ORDER BY sm.created_at DESC';
+
+    final List<Map<String, Object?>> maps = await db.rawQuery(query, args);
+    return maps.map((m) => StockMovement.fromMap(
+      m,
+      productName: m['product_name'] as String?,
+      productEmoji: m['product_emoji'] as String?,
+    )).toList();
   }
 }
