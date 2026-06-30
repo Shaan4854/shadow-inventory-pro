@@ -38,12 +38,32 @@ class SQLiteProductRepository implements ProductRepository {
   }
 
   @override
+  Future<List<String>> getCategories() async {
+    return _databaseHelper.getCategories();
+  }
+
+  @override
+  Future<void> addCategory(String category) async {
+    await _databaseHelper.insertCategory(category);
+  }
+
+  @override
   Future<void> seedDatabaseIfEmpty() async {
     final int productCount = await _databaseHelper.countProducts();
     if (productCount > 0) {
       return;
     }
 
-    await _databaseHelper.insertProducts(SeedData.initialProducts());
+    final List<Product> initialProducts = SeedData.initialProducts();
+    await _databaseHelper.insertProducts(initialProducts);
+
+    // Seed categories from initial products
+    final Set<String> categories = initialProducts
+        .map((Product p) => p.category)
+        .where((String c) => c.isNotEmpty)
+        .toSet();
+    for (final String category in categories) {
+      await _databaseHelper.insertCategory(category);
+    }
   }
 }

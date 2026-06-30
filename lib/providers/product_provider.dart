@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../repositories/product_repository.dart';
 import '../utils/app_constants.dart';
 import '../utils/filter_type.dart';
+import '../utils/sort_type.dart';
 
 /// Owns inventory application state and coordinates product persistence.
 class ProductProvider extends ChangeNotifier {
@@ -18,7 +19,9 @@ class ProductProvider extends ChangeNotifier {
   final ProductRepository _productRepository;
 
   final List<Product> _products = <Product>[];
+  final List<String> _categories = <String>[];
   FilterType _selectedFilter = FilterType.all;
+  SortType _selectedSort = SortType.newest;
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
@@ -29,7 +32,12 @@ class ProductProvider extends ChangeNotifier {
     return UnmodifiableListView<Product>(_products);
   }
 
-  /// Products after applying the current search query and selected filter.
+  /// All dynamic categories loaded from persistence.
+  UnmodifiableListView<String> get categories {
+    return UnmodifiableListView<String>(_categories);
+  }
+
+  /// Products after applying the current search query, selected filter, and sort.
   List<Product> get filteredProducts {
     Iterable<Product> visibleProducts = _products;
 
@@ -39,11 +47,17 @@ class ProductProvider extends ChangeNotifier {
 
     visibleProducts = visibleProducts.where(_matchesFilter);
 
-    return List<Product>.unmodifiable(visibleProducts);
+    final List<Product> sortedList = visibleProducts.toList();
+    _applySort(sortedList);
+
+    return List<Product>.unmodifiable(sortedList);
   }
 
   /// Current inventory filter.
   FilterType get selectedFilter => _selectedFilter;
+
+  /// Current inventory sort.
+  SortType get selectedSort => _selectedSort;
 
   /// Current search text.
   String get searchQuery => _searchQuery;
@@ -108,7 +122,7 @@ class ProductProvider extends ChangeNotifier {
     return _isLowStock(product);
   }
 
-  /// Loads products from the repository after seeding an empty database.
+  /// Loads products and categories from the repository.
   Future<void> loadProducts() async {
     _setLoading(true);
     _clearErrorSilently();
@@ -118,6 +132,11 @@ class ProductProvider extends ChangeNotifier {
       final List<Product> loadedProducts =
           await _productRepository.getProducts();
       _replaceProducts(loadedProducts);
+      
+      final List<String> loadedCategories = await _productRepository.getCategories();
+      _categories
+        ..clear()
+        ..addAll(loadedCategories);
     } catch (error) {
       _setError('Unable to load products.');
     } finally {
@@ -133,6 +152,12 @@ class ProductProvider extends ChangeNotifier {
       await _productRepository.addProduct(product);
       _products.insert(0, product);
       _setLowStockAlertIfNeeded(product);
+      
+      if (product.category.isNotEmpty && !_categories.contains(product.category)) {
+        await _productRepository.addCategory(product.category);
+        _categories.add(product.category);
+      }
+      
       notifyListeners();
     } catch (error) {
       _setError('Unable to add product.');
@@ -161,6 +186,12 @@ class ProductProvider extends ChangeNotifier {
 
       await _productRepository.updateProduct(product);
       _setLowStockAlertIfNeeded(product);
+
+      if (product.category.isNotEmpty && !_categories.contains(product.category)) {
+        await _productRepository.addCategory(product.category);
+        _categories.add(product.category);
+      }
+
       notifyListeners();
     } catch (error) {
       _setError('Unable to update product.');
@@ -189,6 +220,22 @@ class ProductProvider extends ChangeNotifier {
     } catch (error) {
       _setError('Unable to delete product.');
     }
+  }
+
+  /// Returns true if the SKU already exists for another product.
+  bool isSkuDuplicate(String sku, String? excludeId) {
+    if (sku.isEmpty) {
+      return false;
+    }
+    return _products.any((Product p) => p.sku == sku && p.id != excludeId);
+  }
+
+  /// Returns true if the barcode already exists for another product.
+  bool isBarcodeDuplicate(String barcode, String? excludeId) {
+    if (barcode.isEmpty) {
+      return false;
+    }
+    return _products.any((Product p) => p.barcode == barcode && p.id != excludeId);
   }
 
   void _deleteImageFile(String? path) {
@@ -227,6 +274,16 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Changes the selected inventory sort.
+  void setSort(SortType sort) {
+    if (_selectedSort == sort) {
+      return;
+    }
+
+    _selectedSort = sort;
+    notifyListeners();
+  }
+
   /// Clears the current alert message.
   void clearAlert() {
     if (_alertMessage == null) {
@@ -256,9 +313,10 @@ class ProductProvider extends ChangeNotifier {
   bool _matchesSearch(Product product) {
     final String query = _searchQuery.toLowerCase();
     final String name = product.name.toLowerCase();
+    final String sku = product.sku.toLowerCase();
+    final String barcode = product.barcode.toLowerCase();
 
-    // Future barcode search can be added here without changing the UI layer.
-    return name.contains(query);
+    return name.contains(query) || sku.contains(query) || barcode.contains(query);
   }
 
   bool _matchesFilter(Product product) {
@@ -270,6 +328,25 @@ class ProductProvider extends ChangeNotifier {
       FilterType.highStock =>
         product.stock >= AppConstants.highStockThreshold,
     };
+  }
+
+  void _applySort(List<Product> list) {
+    switch (_selectedSort) {
+      case SortType.newest:
+        list.sort((Product a, Product b) => b.updatedAt.compareTo(a.updatedAt));
+      case SortType.nameAsc:
+        list.sort((Product a, Product b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      case SortType.nameDesc:
+        list.sort((Product a, Product b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
+      case SortType.stockAsc:
+        list.sort((Product a, Product b) => a.stock.compareTo(b.stock));
+      case SortType.stockDesc:
+        list.sort((Product a, Product b) => b.stock.compareTo(a.stock));
+      case SortType.priceAsc:
+        list.sort((Product a, Product b) => a.sellPrice.compareTo(b.sellPrice));
+      case SortType.priceDesc:
+        list.sort((Product a, Product b) => b.sellPrice.compareTo(a.sellPrice));
+    }
   }
 
   bool _isLowStock(Product product) {

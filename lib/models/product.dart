@@ -15,6 +15,8 @@ class Product extends Equatable {
     required this.updatedAt,
     this.imagePath,
     this.category = '',
+    this.brand = '',
+    this.unit = 'pcs',
     this.sku = '',
     this.barcode = '',
     this.notes = '',
@@ -46,16 +48,22 @@ class Product extends Equatable {
   /// Fallback visual when no image is available.
   final String emoji;
 
-  /// Optional future-ready product category.
+  /// Product category.
   final String category;
 
-  /// Optional future-ready stock keeping unit.
+  /// Product brand.
+  final String brand;
+
+  /// Product unit (e.g., pcs, kg, ml).
+  final String unit;
+
+  /// Stock keeping unit.
   final String sku;
 
-  /// Optional future-ready barcode value.
+  /// Barcode value.
   final String barcode;
 
-  /// Optional future-ready internal notes.
+  /// Internal notes or description.
   final String notes;
 
   /// Creation timestamp.
@@ -75,6 +83,8 @@ class Product extends Equatable {
     Object? imagePath = _unset,
     String? emoji,
     String? category,
+    String? brand,
+    String? unit,
     String? sku,
     String? barcode,
     String? notes,
@@ -93,6 +103,8 @@ class Product extends Equatable {
           : imagePath as String?,
       emoji: emoji ?? this.emoji,
       category: category ?? this.category,
+      brand: brand ?? this.brand,
+      unit: unit ?? this.unit,
       sku: sku ?? this.sku,
       barcode: barcode ?? this.barcode,
       notes: notes ?? this.notes,
@@ -113,6 +125,8 @@ class Product extends Equatable {
       'image_path': imagePath,
       'emoji': emoji,
       'category': category,
+      'brand': brand,
+      'unit': unit,
       'sku': sku,
       'barcode': barcode,
       'notes': notes,
@@ -133,6 +147,8 @@ class Product extends Equatable {
       imagePath: map['image_path'] as String?,
       emoji: map['emoji'] as String,
       category: map['category'] as String? ?? '',
+      brand: map['brand'] as String? ?? '',
+      unit: map['unit'] as String? ?? 'pcs',
       sku: map['sku'] as String? ?? '',
       barcode: map['barcode'] as String? ?? '',
       notes: map['notes'] as String? ?? '',
@@ -160,6 +176,8 @@ class Product extends Equatable {
         imagePath,
         emoji,
         category,
+        brand,
+        unit,
         sku,
         barcode,
         notes,

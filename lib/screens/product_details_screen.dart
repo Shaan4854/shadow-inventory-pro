@@ -27,6 +27,11 @@ class ProductDetailsScreen extends StatelessWidget {
         title: const Text('PRODUCT DETAILS'),
         actions: <Widget>[
           IconButton(
+            onPressed: () => _handleDuplicate(context),
+            icon: const Icon(Icons.copy_rounded),
+            tooltip: 'Duplicate Product',
+          ),
+          IconButton(
             onPressed: () => _handleEdit(context),
             icon: const Icon(Icons.edit_outlined),
           ),
@@ -46,6 +51,18 @@ class ProductDetailsScreen extends StatelessWidget {
             _StockStatus(product: product),
             SizedBox(height: AppConstants.spacing.xl),
             _DetailsGrid(product: product),
+            if (product.notes.isNotEmpty) ...<Widget>[
+              SizedBox(height: AppConstants.spacing.xl),
+              const Text(
+                'Description',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: AppConstants.spacing.sm),
+              Text(
+                product.notes,
+                style: TextStyle(color: AppConstants.colors.textSecondary),
+              ),
+            ],
             SizedBox(height: AppConstants.spacing.xxl),
             Row(
               children: <Widget>[
@@ -78,6 +95,15 @@ class ProductDetailsScreen extends StatelessWidget {
       context,
       provider: context.read<ProductProvider>(),
       product: product,
+    );
+  }
+
+  void _handleDuplicate(BuildContext context) {
+    ProductFormSheet.show(
+      context,
+      provider: context.read<ProductProvider>(),
+      product: product,
+      isDuplicate: true,
     );
   }
 
@@ -196,7 +222,12 @@ class _DetailsGrid extends StatelessWidget {
       children: <Widget>[
         Row(
           children: <Widget>[
-            Expanded(child: _DetailItem(label: 'Stock', value: '${product.stock}')),
+            Expanded(
+              child: _DetailItem(
+                label: 'Stock',
+                value: '${product.stock} ${product.unit}',
+              ),
+            ),
             Expanded(
               child: _DetailItem(
                 label: 'Selling Price',
@@ -212,7 +243,9 @@ class _DetailsGrid extends StatelessWidget {
           ],
         ),
         SizedBox(height: AppConstants.spacing.md),
-        _Divider(),
+        const _Divider(),
+        _RowItem(label: 'Brand', value: product.brand.isEmpty ? '-' : product.brand),
+        const _Divider(),
         _RowItem(label: 'SKU', value: product.sku.isEmpty ? '-' : product.sku),
         const _Divider(),
         _RowItem(label: 'Barcode', value: product.barcode.isEmpty ? '-' : product.barcode),

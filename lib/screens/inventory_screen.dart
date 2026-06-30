@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../providers/product_provider.dart';
 import '../utils/app_constants.dart';
 import '../utils/app_routes.dart';
+import '../utils/sort_type.dart';
 import '../widgets/alert_banner.dart';
 import '../widgets/category_filter_bar.dart';
 import '../widgets/empty_inventory.dart';
@@ -183,17 +184,96 @@ class _InventoryHeader extends StatelessWidget {
                 'Recent Products',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  'View All',
-                  style: TextStyle(color: AppConstants.colors.primary),
-                ),
+              Row(
+                children: <Widget>[
+                  IconButton(
+                    onPressed: () => _showSortSheet(context, provider),
+                    icon: Icon(Icons.sort_rounded, color: AppConstants.colors.primary),
+                    tooltip: 'Sort Products',
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      'View All',
+                      style: TextStyle(color: AppConstants.colors.primary),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  void _showSortSheet(BuildContext context, ProductProvider provider) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: EdgeInsets.all(AppConstants.spacing.page),
+                child: Text('Sort by', style: Theme.of(context).textTheme.titleMedium),
+              ),
+              _SortTile(
+                label: 'Newest First',
+                type: SortType.newest,
+                selected: provider.selectedSort == SortType.newest,
+                onTap: () => provider.setSort(SortType.newest),
+              ),
+              _SortTile(
+                label: 'Name (A-Z)',
+                type: SortType.nameAsc,
+                selected: provider.selectedSort == SortType.nameAsc,
+                onTap: () => provider.setSort(SortType.nameAsc),
+              ),
+              _SortTile(
+                label: 'Stock (Low to High)',
+                type: SortType.stockAsc,
+                selected: provider.selectedSort == SortType.stockAsc,
+                onTap: () => provider.setSort(SortType.stockAsc),
+              ),
+              _SortTile(
+                label: 'Price (High to Low)',
+                type: SortType.priceDesc,
+                selected: provider.selectedSort == SortType.priceDesc,
+                onTap: () => provider.setSort(SortType.priceDesc),
+              ),
+              SizedBox(height: AppConstants.spacing.md),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SortTile extends StatelessWidget {
+  const _SortTile({
+    required this.label,
+    required this.type,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final SortType type;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(label),
+      trailing: selected ? Icon(Icons.check_circle, color: AppConstants.colors.primary) : null,
+      onTap: () {
+        onTap();
+        Navigator.pop(context);
+      },
     );
   }
 }
@@ -298,7 +378,7 @@ class _QuickStatsGrid extends StatelessWidget {
         Expanded(
           child: _QuickStatCard(
             label: 'Categories',
-            value: '32',
+            value: '${provider.categories.length}',
             color: AppConstants.colors.blue,
             icon: Icons.category_outlined,
           ),

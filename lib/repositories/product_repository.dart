@@ -20,6 +20,12 @@ abstract class ProductRepository {
   /// Removes a product by id.
   Future<void> deleteProduct(String id);
 
+  /// Returns all dynamic categories.
+  Future<List<String>> getCategories();
+
+  /// Adds a new dynamic category.
+  Future<void> addCategory(String category);
+
   /// Adds starter products only when the product table is empty.
   Future<void> seedDatabaseIfEmpty();
 }

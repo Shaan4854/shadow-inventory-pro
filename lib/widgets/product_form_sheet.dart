@@ -17,6 +17,7 @@ class ProductFormSheet extends StatefulWidget {
   const ProductFormSheet({
     required this.provider,
     this.product,
+    this.isDuplicate = false,
     super.key,
   });
 
@@ -25,6 +26,7 @@ class ProductFormSheet extends StatefulWidget {
     BuildContext context, {
     required ProductProvider provider,
     Product? product,
+    bool isDuplicate = false,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -40,6 +42,7 @@ class ProductFormSheet extends StatefulWidget {
         return ProductFormSheet(
           provider: provider,
           product: product,
+          isDuplicate: isDuplicate,
         );
       },
     );
@@ -48,8 +51,11 @@ class ProductFormSheet extends StatefulWidget {
   /// Product provider used for persistence through the app state layer.
   final ProductProvider provider;
 
-  /// Product to edit. Null means add mode.
+  /// Product to edit or duplicate. Null means fresh add mode.
   final Product? product;
+
+  /// True when the [product] should be used as a template for a new item.
+  final bool isDuplicate;
 
   @override
   State<ProductFormSheet> createState() => _ProductFormSheetState();
@@ -61,6 +67,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final ImagePicker _imagePicker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _brandController = TextEditingController();
+  final TextEditingController _unitController = TextEditingController();
   final TextEditingController _buyController = TextEditingController();
   final TextEditingController _sellController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
@@ -74,7 +82,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   double _profitPreview = 0;
   bool _isSaving = false;
 
-  bool get _isEditMode => widget.product != null;
+  bool get _isEditMode => widget.product != null && !widget.isDuplicate;
 
   @override
   void initState() {
@@ -87,6 +95,8 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
   @override
   void dispose() {
     _nameController.dispose();
+    _brandController.dispose();
+    _unitController.dispose();
     _buyController.dispose();
     _sellController.dispose();
     _stockController.dispose();
@@ -122,7 +132,11 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                 AppConstants.spacing.md,
               ),
               child: Text(
-                _isEditMode ? 'Edit Item' : 'Add Item',
+                _isEditMode
+                    ? 'Edit Item'
+                    : widget.isDuplicate
+                        ? 'Duplicate Item'
+                        : 'Add Item',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: AppConstants.colors.primary,
@@ -157,6 +171,19 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                     SizedBox(height: AppConstants.spacing.xl),
                     _TwoColumnFields(
                       first: _TextInput(
+                        controller: _brandController,
+                        label: 'Brand',
+                        hintText: 'e.g. Sony',
+                      ),
+                      second: _TextInput(
+                        controller: _unitController,
+                        label: 'Unit',
+                        hintText: 'e.g. pcs, kg',
+                      ),
+                    ),
+                    SizedBox(height: AppConstants.spacing.xl),
+                    _TwoColumnFields(
+                      first: _TextInput(
                         controller: _buyController,
                         label: 'Buy Price (${AppConstants.currencySymbol})',
                         hintText: '0',
@@ -168,7 +195,7 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                         label: 'Sell Price (${AppConstants.currencySymbol})',
                         hintText: '0',
                         keyboardType: TextInputType.number,
-                        validator: _validateNonNegativeDouble,
+                        validator: _validateSellPrice,
                       ),
                     ),
                     SizedBox(height: AppConstants.spacing.md),
@@ -191,33 +218,44 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
                       ),
                     ),
                     SizedBox(height: AppConstants.spacing.xl),
-                    _CategoryDropdown(
+                    _CategorySelector(
                       value: _category,
+                      categories: _allCategories(),
                       onChanged: (String? value) {
-                        if (value == null) {
-                          return;
-                        }
+                        if (value == null) return;
                         setState(() => _category = value);
                       },
+                      onAdd: _showAddCategoryDialog,
                     ),
                     SizedBox(height: AppConstants.spacing.xl),
                     _TextInput(
                       controller: _skuController,
                       label: 'SKU',
                       hintText: 'Optional',
+                      validator: _validateSku,
+                      suffix: IconButton(
+                        icon: const Icon(Icons.auto_fix_high, size: 20),
+                        onPressed: _generateSku,
+                        tooltip: 'Generate SKU',
+                      ),
                     ),
                     SizedBox(height: AppConstants.spacing.xl),
                     _TextInput(
                       controller: _barcodeController,
                       label: 'Barcode',
-                      hintText: 'Enter barcode manually',
-                      keyboardType: TextInputType.text,
+                      hintText: 'Optional',
+                      validator: _validateBarcode,
+                      suffix: IconButton(
+                        icon: const Icon(Icons.qr_code_scanner, size: 20),
+                        onPressed: _generateBarcode,
+                        tooltip: 'Generate Barcode',
+                      ),
                     ),
                     SizedBox(height: AppConstants.spacing.xl),
                     _TextInput(
                       controller: _notesController,
-                      label: 'Notes',
-                      hintText: 'Optional notes',
+                      label: 'Description / Notes',
+                      hintText: 'Optional details',
                       maxLines: 3,
                     ),
                     SizedBox(height: AppConstants.spacing.xxl),
@@ -244,27 +282,77 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
       _buyController.text = '';
       _sellController.text = '';
       _stockController.text = '';
+      _unitController.text = 'pcs';
       _alertController.text = '${AppConstants.defaultLowStockAlert}';
       _updateProfitPreview();
       return;
     }
 
-    _nameController.text = product.name;
+    _nameController.text = widget.isDuplicate ? '${product.name} (Copy)' : product.name;
+    _brandController.text = product.brand;
+    _unitController.text = product.unit;
     _buyController.text = _formatNumber(product.buyPrice);
     _sellController.text = _formatNumber(product.sellPrice);
     _stockController.text = '${product.stock}';
     _alertController.text = '${product.alertThreshold}';
-    _skuController.text = product.sku;
-    _barcodeController.text = product.barcode;
+    _skuController.text = widget.isDuplicate ? '' : product.sku;
+    _barcodeController.text = widget.isDuplicate ? '' : product.barcode;
     _notesController.text = product.notes;
-    _imagePath = product.imagePath;
-    _category = _categoryOptions().contains(product.category) ||
-            product.category.isEmpty
-        ? product.category.isEmpty
-            ? AppConstants.productCategories.first
-            : product.category
+    _imagePath = widget.isDuplicate ? null : product.imagePath;
+    _category = _allCategories().contains(product.category)
+        ? product.category
         : AppConstants.productCategories.first;
     _updateProfitPreview();
+  }
+
+  List<String> _allCategories() {
+    final Set<String> all = <String>{
+      ...AppConstants.productCategories,
+      ...widget.provider.categories,
+    };
+    return all.toList()..sort();
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final TextEditingController controller = TextEditingController();
+    final String? newCategory = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('New Category'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Enter category name'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (newCategory != null && newCategory.isNotEmpty) {
+      setState(() => _category = newCategory);
+    }
+  }
+
+  void _generateSku() {
+    final String prefix = _nameController.text.isNotEmpty
+        ? _nameController.text.substring(0, min(3, _nameController.text.length)).toUpperCase()
+        : 'PRD';
+    final String random = Random().nextInt(9999).toString().padLeft(4, '0');
+    setState(() => _skuController.text = '$prefix-$random');
+  }
+
+  void _generateBarcode() {
+    final String random = (Random().nextDouble() * 1000000000000).toInt().toString().padLeft(12, '0');
+    setState(() => _barcodeController.text = random);
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -274,14 +362,10 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
       maxWidth: 1600,
     );
 
-    if (pickedFile == null) {
-      return;
-    }
+    if (pickedFile == null) return;
 
     final String storedPath = await _copyImageToLocalStorage(pickedFile);
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() => _imagePath = storedPath);
   }
@@ -302,20 +386,14 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     final String fileName = '${_uuid.v4()}$extension';
     final String destinationPath = path.join(imageDirectory.path, fileName);
 
-    return File(pickedFile.path).copy(destinationPath).then(
-          (File file) => file.path,
-        );
+    return File(pickedFile.path).copy(destinationPath).then((File file) => file.path);
   }
 
   Future<void> _saveProduct() async {
-    if (_isSaving) {
-      return;
-    }
+    if (_isSaving) return;
 
     final FormState? form = _formKey.currentState;
-    if (form == null || !form.validate()) {
-      return;
-    }
+    if (form == null || !form.validate()) return;
 
     setState(() => _isSaving = true);
     widget.provider.clearAlert();
@@ -323,26 +401,22 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
 
     final Product product = _buildProduct();
 
-    if (_isEditMode) {
-      await widget.provider.updateProduct(product);
-    } else {
-      await widget.provider.addProduct(product);
-    }
+    try {
+      if (_isEditMode) {
+        await widget.provider.updateProduct(product);
+      } else {
+        await widget.provider.addProduct(product);
+      }
 
-    await widget.provider.loadProducts();
-    if (widget.provider.alertMessage == null &&
-        widget.provider.errorMessage == null) {
-      widget.provider.showAlert(
-        _isEditMode ? 'Product updated.' : 'Product added.',
-      );
+      if (mounted) {
+        widget.provider.showAlert(_isEditMode ? 'Product updated.' : 'Product added.');
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      widget.provider.showAlert('Error saving product');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() => _isSaving = false);
-    Navigator.of(context).pop();
   }
 
   Product _buildProduct() {
@@ -351,9 +425,11 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     final double buyPrice = _parseDouble(_buyController.text);
     final double sellPrice = _parseDouble(_sellController.text);
 
-    if (existing != null) {
+    if (_isEditMode && existing != null) {
       return existing.copyWith(
         name: _nameController.text.trim(),
+        brand: _brandController.text.trim(),
+        unit: _unitController.text.trim(),
         buyPrice: buyPrice,
         sellPrice: sellPrice,
         stock: _parseInt(_stockController.text),
@@ -370,12 +446,14 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     return Product(
       id: _uuid.v4(),
       name: _nameController.text.trim(),
+      brand: _brandController.text.trim(),
+      unit: _unitController.text.trim(),
       buyPrice: buyPrice,
       sellPrice: sellPrice,
       stock: _parseInt(_stockController.text),
       alertThreshold: _parseInt(_alertController.text),
       imagePath: _imagePath,
-      emoji: _randomFallbackEmoji(),
+      emoji: widget.isDuplicate ? existing!.emoji : _randomFallbackEmoji(),
       category: _category,
       sku: _skuController.text.trim(),
       barcode: _barcodeController.text.trim(),
@@ -390,56 +468,69 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     final double sellPrice = _parseDouble(_sellController.text);
     final double profit = sellPrice - buyPrice;
 
-    if (_profitPreview == profit) {
-      return;
-    }
-
+    if (_profitPreview == profit) return;
     setState(() => _profitPreview = profit);
   }
 
   String? _validateName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Name is required';
-    }
+    if (value == null || value.trim().isEmpty) return 'Name is required';
     return null;
   }
 
   String? _validateNonNegativeDouble(String? value) {
     final double? parsed = double.tryParse((value ?? '').trim());
-    if (parsed == null || parsed < 0) {
-      return 'Enter 0 or more';
+    if (parsed == null || parsed < 0) return 'Enter 0 or more';
+    return null;
+  }
+
+  String? _validateSellPrice(String? value) {
+    final double? sell = double.tryParse((value ?? '').trim());
+    if (sell == null || sell < 0) return 'Enter 0 or more';
+    
+    final double buy = _parseDouble(_buyController.text);
+    if (sell < buy) {
+      // Returning null as this is just a warning, but we could return a message if we wanted to enforce it.
+      // However, requirement says "warning", so we might just use a visual cue in real app.
+      // For now, let's allow but keep profit preview red.
     }
     return null;
   }
 
   String? _validateNonNegativeInt(String? value) {
     final int? parsed = int.tryParse((value ?? '').trim());
-    if (parsed == null || parsed < 0) {
-      return 'Enter 0 or more';
-    }
+    if (parsed == null || parsed < 0) return 'Enter 0 or more';
     return null;
   }
 
   String? _validatePositiveInt(String? value) {
     final int? parsed = int.tryParse((value ?? '').trim());
-    if (parsed == null || parsed < 1) {
-      return 'Enter 1 or more';
+    if (parsed == null || parsed < 1) return 'Enter 1 or more';
+    return null;
+  }
+
+  String? _validateSku(String? value) {
+    final String sku = (value ?? '').trim();
+    if (sku.isEmpty) return null;
+    if (widget.provider.isSkuDuplicate(sku, _isEditMode ? widget.product?.id : null)) {
+      return 'SKU already exists';
     }
     return null;
   }
 
-  double _parseDouble(String value) {
-    return double.tryParse(value.trim()) ?? 0;
+  String? _validateBarcode(String? value) {
+    final String barcode = (value ?? '').trim();
+    if (barcode.isEmpty) return null;
+    if (widget.provider.isBarcodeDuplicate(barcode, _isEditMode ? widget.product?.id : null)) {
+      return 'Barcode already exists';
+    }
+    return null;
   }
 
-  int _parseInt(String value) {
-    return int.tryParse(value.trim()) ?? 0;
-  }
+  double _parseDouble(String value) => double.tryParse(value.trim()) ?? 0;
+  int _parseInt(String value) => int.tryParse(value.trim()) ?? 0;
 
   String _formatNumber(double value) {
-    if (value == value.roundToDouble()) {
-      return '${value.round()}';
-    }
+    if (value == value.roundToDouble()) return '${value.round()}';
     return '$value';
   }
 
@@ -447,9 +538,47 @@ class _ProductFormSheetState extends State<ProductFormSheet> {
     final int index = Random().nextInt(AppConstants.fallbackEmojis.length);
     return AppConstants.fallbackEmojis[index];
   }
+}
 
-  List<String> _categoryOptions() {
-    return AppConstants.productCategories;
+class _CategorySelector extends StatelessWidget {
+  const _CategorySelector({
+    required this.value,
+    required this.categories,
+    required this.onChanged,
+    required this.onAdd,
+  });
+
+  final String value;
+  final List<String> categories;
+  final ValueChanged<String?> onChanged;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: categories.contains(value) ? value : categories.first,
+            onChanged: onChanged,
+            dropdownColor: AppConstants.colors.surface,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: categories.map((String category) {
+              return DropdownMenuItem<String>(
+                value: category,
+                child: Text(category),
+              );
+            }).toList(),
+          ),
+        ),
+        SizedBox(width: AppConstants.spacing.md),
+        IconButton.filledTonal(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add),
+          tooltip: 'Add new category',
+        ),
+      ],
+    );
   }
 }
 
@@ -513,17 +642,15 @@ class _ImagePickerField extends StatelessWidget {
                     : Image.file(
                         File(imagePath!),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) {
-                          return ColoredBox(
-                            color: AppConstants.colors.surfaceHigh,
-                            child: Center(
-                              child: Text(
-                                fallbackEmoji,
-                                style: const TextStyle(fontSize: 34),
-                              ),
+                        errorBuilder: (_, __, ___) => ColoredBox(
+                          color: AppConstants.colors.surfaceHigh,
+                          child: Center(
+                            child: Text(
+                              fallbackEmoji,
+                              style: const TextStyle(fontSize: 34),
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
               ),
             ),
@@ -555,10 +682,7 @@ class _ImagePickerField extends StatelessWidget {
 }
 
 class _TwoColumnFields extends StatelessWidget {
-  const _TwoColumnFields({
-    required this.first,
-    required this.second,
-  });
+  const _TwoColumnFields({required this.first, required this.second});
 
   final Widget first;
   final Widget second;
@@ -597,6 +721,7 @@ class _TextInput extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.maxLines = 1,
+    this.suffix,
   });
 
   final TextEditingController controller;
@@ -605,6 +730,7 @@ class _TextInput extends StatelessWidget {
   final TextInputType? keyboardType;
   final FormFieldValidator<String>? validator;
   final int maxLines;
+  final Widget? suffix;
 
   @override
   Widget build(BuildContext context) {
@@ -619,33 +745,8 @@ class _TextInput extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hintText,
+        suffixIcon: suffix,
       ),
-    );
-  }
-}
-
-class _CategoryDropdown extends StatelessWidget {
-  const _CategoryDropdown({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String value;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      onChanged: onChanged,
-      dropdownColor: AppConstants.colors.surface,
-      decoration: const InputDecoration(labelText: 'Category'),
-      items: AppConstants.productCategories.map((String category) {
-        return DropdownMenuItem<String>(
-          value: category,
-          child: Text(category),
-        );
-      }).toList(),
     );
   }
 }
@@ -674,7 +775,11 @@ class _ProfitPreview extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.trending_up_rounded, color: accentColor, size: 18),
+          Icon(
+            value >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+            color: accentColor,
+            size: 18,
+          ),
           SizedBox(width: AppConstants.spacing.md),
           Text(
             'Profit Preview',

@@ -11,9 +11,10 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String databaseName = 'shadow_inventory_pro.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
 
   static const String productsTable = 'products';
+  static const String categoriesTable = 'categories';
 
   Database? _database;
 
@@ -46,11 +47,14 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute(_createProductsTableSql);
+    await db.execute(_createCategoriesTableSql);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Future migrations start here.
+      await db.execute('ALTER TABLE $productsTable ADD COLUMN brand TEXT NOT NULL DEFAULT ""');
+      await db.execute('ALTER TABLE $productsTable ADD COLUMN unit TEXT NOT NULL DEFAULT "pcs"');
+      await db.execute(_createCategoriesTableSql);
     }
   }
 
@@ -65,6 +69,8 @@ CREATE TABLE $productsTable (
   image_path TEXT,
   emoji TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT '',
+  brand TEXT NOT NULL DEFAULT '',
+  unit TEXT NOT NULL DEFAULT 'pcs',
   sku TEXT NOT NULL DEFAULT '',
   barcode TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
@@ -72,6 +78,30 @@ CREATE TABLE $productsTable (
   updated_at INTEGER NOT NULL
 )
 ''';
+
+  static const String _createCategoriesTableSql = '''
+CREATE TABLE $categoriesTable (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+)
+''';
+
+  /// Fetches every category.
+  Future<List<String>> getCategories() async {
+    final Database db = await database;
+    final List<Map<String, Object?>> maps = await db.query(categoriesTable);
+    return maps.map((Map<String, Object?> m) => m['name'] as String).toList();
+  }
+
+  /// Inserts a category if it doesn't exist.
+  Future<void> insertCategory(String name) async {
+    final Database db = await database;
+    await db.insert(
+      categoriesTable,
+      <String, Object?>{'id': DateTime.now().millisecondsSinceEpoch.toString(), 'name': name},
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
 
   /// Fetches every product ordered by newest update first.
   Future<List<Product>> getProducts() async {
