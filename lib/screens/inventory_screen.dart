@@ -63,11 +63,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 child: Column(
                   children: <Widget>[
+                    const Focus(autofocus: true, child: SizedBox.shrink()),
                     _InventoryHeader(
                       provider: provider,
                       searchFocusNode: _searchFocusNode,
                     ),
-                    Expanded(child: _InventoryBody(provider: provider)),
+                    Expanded(
+                      child: _InventoryBody(
+                        provider: provider,
+                        searchFocusNode: _searchFocusNode,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -106,6 +112,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _handleAddPressed() {
+    _searchFocusNode.unfocus();
     ProductFormSheet.show(context, provider: context.read<ProductProvider>());
   }
 }
@@ -396,9 +403,13 @@ class _TitleRow extends StatelessWidget {
 }
 
 class _InventoryBody extends StatelessWidget {
-  const _InventoryBody({required this.provider});
+  const _InventoryBody({
+    required this.provider,
+    required this.searchFocusNode,
+  });
 
   final ProductProvider provider;
+  final FocusNode searchFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -416,6 +427,7 @@ class _InventoryBody extends StatelessWidget {
                   ),
                   products: products,
                   provider: provider,
+                  searchFocusNode: searchFocusNode,
                 ),
     );
   }
@@ -425,11 +437,13 @@ class _ProductList extends StatelessWidget {
   const _ProductList({
     required this.products,
     required this.provider,
+    required this.searchFocusNode,
     super.key,
   });
 
   final List<Product> products;
   final ProductProvider provider;
+  final FocusNode searchFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -458,6 +472,7 @@ class _ProductList extends StatelessWidget {
   }
 
   void _handleDetails(BuildContext context, Product product) {
+    searchFocusNode.unfocus();
     Navigator.of(context).pushNamed(
       AppRoutes.productDetails,
       arguments: product,
@@ -465,6 +480,7 @@ class _ProductList extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, Product product) async {
+    searchFocusNode.unfocus();
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
