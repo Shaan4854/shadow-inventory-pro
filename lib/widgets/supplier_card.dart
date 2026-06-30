@@ -16,78 +16,89 @@ class SupplierCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: AppConstants.spacing.md),
-      padding: EdgeInsets.all(AppConstants.spacing.md),
-      decoration: BoxDecoration(
-        color: AppConstants.colors.surface,
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppConstants.spacing.md),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(
+          context,
+          '/supplier-details',
+          arguments: supplier,
+        ),
         borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-        border: Border.all(color: AppConstants.colors.border),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppConstants.colors.blue.withValues(alpha: 0.1),
-            child: Text(
-              supplier.name[0].toUpperCase(),
-              style: TextStyle(
-                color: AppConstants.colors.blue,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+        child: Container(
+          padding: EdgeInsets.all(AppConstants.spacing.md),
+          decoration: BoxDecoration(
+            color: AppConstants.colors.surface,
+            borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+            border: Border.all(color: AppConstants.colors.border),
           ),
-          SizedBox(width: AppConstants.spacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  supplier.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  '${supplier.contactPerson} • ${supplier.mobile}',
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppConstants.colors.blue.withValues(alpha: 0.1),
+                child: Text(
+                  supplier.name[0].toUpperCase(),
                   style: TextStyle(
-                    color: AppConstants.colors.textSecondary,
-                    fontSize: 12,
+                    color: AppConstants.colors.blue,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-            ),
-          ),
-          if (supplier.outstandingBalance > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppConstants.colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppConstants.radii.sm),
               ),
-              child: Text(
-                '${AppConstants.currencySymbol}${supplier.outstandingBalance.toStringAsFixed(0)}',
-                style: TextStyle(
-                  color: AppConstants.colors.orange,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+              SizedBox(width: AppConstants.spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      supplier.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      '${supplier.contactPerson} • ${supplier.mobile}',
+                      style: TextStyle(
+                        color: AppConstants.colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'edit') onEdit();
-              if (value == 'delete') onDelete();
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'edit', child: Text('Edit')),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Text('Delete', style: TextStyle(color: Colors.red)),
+              if (supplier.outstandingBalance > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppConstants.colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppConstants.radii.sm),
+                  ),
+                  child: Text(
+                    '${AppConstants.currencySymbol}${supplier.outstandingBalance.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: AppConstants.colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') onEdit();
+                  if (value == 'delete') onDelete();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete', style: TextStyle(color: Colors.red)),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../models/transaction_item.dart';
 import '../models/transaction_type.dart';
 import '../providers/product_provider.dart';
+import '../providers/customer_provider.dart';
 import '../utils/app_constants.dart';
 import '../widgets/transaction_card.dart';
 
@@ -81,6 +82,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       discount: 0,
       notes: _reasonController.text,
       entityName: _originalTransaction!.entityName,
+      entityId: _originalTransaction!.entityId,
+      paidAmount: 0,
       createdAt: DateTime.now(),
       items: activeItems
           .map((item) => TransactionItem(
@@ -94,6 +97,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     );
 
     await context.read<ProductProvider>().addTransaction(returnTx);
+    
+    if (returnTx.entityId.isNotEmpty) {
+      if (mounted) {
+        // Sales return decreases what customer owes us
+        await context.read<CustomerProvider>().updateCustomerBalance(
+          returnTx.entityId,
+          -returnTx.grandTotal,
+        );
+      }
+    }
+
     if (mounted) {
       Navigator.pop(context);
     }

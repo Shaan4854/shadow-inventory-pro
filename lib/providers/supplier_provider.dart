@@ -17,6 +17,12 @@ class SupplierProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  List<Supplier> get recentSuppliers {
+    final sorted = List<Supplier>.from(_suppliers);
+    sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sorted.take(5).toList();
+  }
+
   Future<void> loadSuppliers() async {
     _isLoading = true;
     _errorMessage = null;

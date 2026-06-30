@@ -12,6 +12,7 @@ import '../providers/supplier_provider.dart';
 import '../utils/app_constants.dart';
 import '../widgets/payment_summary.dart';
 import '../widgets/quantity_stepper.dart';
+import '../widgets/supplier_form_sheet.dart';
 
 class PurchaseScreen extends StatefulWidget {
   const PurchaseScreen({super.key});
@@ -30,12 +31,15 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       TextEditingController(text: '0');
   final TextEditingController _transportController =
       TextEditingController(text: '0');
+  final TextEditingController _paidAmountController =
+      TextEditingController(text: '0');
   String _paymentMethod = 'Cash';
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.total);
   double get _discount => double.tryParse(_discountController.text) ?? 0;
   double get _transport => double.tryParse(_transportController.text) ?? 0;
   double get _grandTotal => _subtotal - _discount + _transport;
+  double get _paidAmount => double.tryParse(_paidAmountController.text) ?? 0;
 
   @override
   void dispose() {
@@ -43,6 +47,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     _notesController.dispose();
     _discountController.dispose();
     _transportController.dispose();
+    _paidAmountController.dispose();
     super.dispose();
   }
 
@@ -113,6 +118,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       discount: _discount,
       notes: _notesController.text,
       entityName: _entityController.text,
+      entityId: _selectedSupplier?.id ?? '',
+      paidAmount: _paymentMethod == 'Credit' ? _paidAmount : (_subtotal + _transport - _discount),
       paymentMethod: _paymentMethod,
       createdAt: DateTime.now(),
       items: _items
@@ -128,11 +135,14 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
 
     await context.read<ProductProvider>().addTransaction(transaction);
 
-    if (_paymentMethod == 'Credit' && _selectedSupplier != null) {
-      if (mounted) {
-        await context
-            .read<SupplierProvider>()
-            .updateSupplierBalance(_selectedSupplier!.id, _grandTotal);
+    if (_selectedSupplier != null) {
+      final double balanceToUpdate = transaction.balanceAmount;
+      if (balanceToUpdate != 0) {
+        if (mounted) {
+          await context
+              .read<SupplierProvider>()
+              .updateSupplierBalance(_selectedSupplier!.id, balanceToUpdate);
+        }
       }
     }
 
@@ -165,9 +175,25 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 children: [
                   _SectionHeader(
                     title: 'Supplier Details',
-                    trailing: TextButton(
-                      onPressed: () => _showSupplierPicker(context),
-                      child: const Text('Search'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedSupplier != null)
+                          IconButton(
+                            onPressed: () => SupplierFormSheet.show(
+                              context,
+                              provider: context.read<SupplierProvider>(),
+                              supplier: _selectedSupplier,
+                            ),
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        TextButton(
+                          onPressed: () => _showSupplierPicker(context),
+                          child: const Text('Search'),
+                        ),
+                      ],
                     ),
                   ),
                   TextField(
@@ -189,6 +215,18 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
                   ),
+                  if (_paymentMethod == 'Credit') ...[
+                    SizedBox(height: AppConstants.spacing.md),
+                    TextField(
+                      controller: _paidAmountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Amount Paid (Partial Payment)',
+                        prefixText: AppConstants.currencySymbol,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
                   SizedBox(height: AppConstants.spacing.lg),
                   _SectionHeader(
                     title: 'Products',
@@ -392,25 +430,50 @@ class _SupplierPickerState extends State<_SupplierPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final suppliers = context.watch<SupplierProvider>().searchSuppliers(_query);
+    final provider = context.watch<SupplierProvider>();
+    final suppliers = provider.searchSuppliers(_query);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.8,
       padding: EdgeInsets.all(AppConstants.spacing.page),
       child: Column(
         children: [
-          TextField(
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Search supplier by name or phone...',
-              prefixIcon: Icon(Icons.search_rounded),
-            ),
-            onChanged: (v) => setState(() => _query = v),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Search supplier...',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+              ),
+              SizedBox(width: AppConstants.spacing.md),
+              IconButton.filled(
+                onPressed: () => SupplierFormSheet.show(context, provider: provider),
+                icon: const Icon(Icons.add_business_rounded),
+                tooltip: 'Add New Supplier',
+              ),
+            ],
           ),
           SizedBox(height: AppConstants.spacing.md),
           Expanded(
             child: suppliers.isEmpty
-                ? const Center(child: Text('No suppliers found.'))
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('No suppliers found.'),
+                        TextButton(
+                          onPressed: () =>
+                              SupplierFormSheet.show(context, provider: provider),
+                          child: const Text('Add your first supplier'),
+                        ),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     itemCount: suppliers.length,
                     itemBuilder: (context, index) {

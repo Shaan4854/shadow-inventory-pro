@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../models/transaction_item.dart';
 import '../models/transaction_type.dart';
 import '../providers/product_provider.dart';
+import '../providers/supplier_provider.dart';
 import '../utils/app_constants.dart';
 import '../widgets/transaction_card.dart';
 
@@ -82,6 +83,8 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
       discount: 0,
       notes: _reasonController.text,
       entityName: _originalTransaction!.entityName,
+      entityId: _originalTransaction!.entityId,
+      paidAmount: 0, // Returns are usually adjustments to balance
       createdAt: DateTime.now(),
       items: activeItems
           .map((item) => TransactionItem(
@@ -95,6 +98,17 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
     );
 
     await context.read<ProductProvider>().addTransaction(returnTx);
+    
+    if (returnTx.entityId.isNotEmpty) {
+      if (mounted) {
+        // Return amount decreases outstanding balance (what we owe)
+        await context.read<SupplierProvider>().updateSupplierBalance(
+          returnTx.entityId,
+          -returnTx.grandTotal,
+        );
+      }
+    }
+
     if (mounted) {
       Navigator.pop(context);
     }

@@ -17,7 +17,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String databaseName = 'shadow_inventory_pro.db';
-  static const int databaseVersion = 5;
+  static const int databaseVersion = 6;
 
   static const String productsTable = 'products';
   static const String categoriesTable = 'categories';
@@ -86,6 +86,12 @@ class DatabaseHelper {
     if (oldVersion < 5) {
       await db.execute(_createSuppliersTableSql);
     }
+    if (oldVersion < 6) {
+      await db.execute(
+          'ALTER TABLE $transactionsTable ADD COLUMN entity_id TEXT NOT NULL DEFAULT ""',);
+      await db.execute(
+          'ALTER TABLE $transactionsTable ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0',);
+    }
   }
 
   static const String _createProductsTableSql = '''
@@ -125,6 +131,8 @@ CREATE TABLE $transactionsTable (
   notes TEXT NOT NULL DEFAULT '',
   payment_method TEXT NOT NULL DEFAULT 'Cash',
   entity_name TEXT NOT NULL DEFAULT '',
+  entity_id TEXT NOT NULL DEFAULT '',
+  paid_amount REAL NOT NULL DEFAULT 0.0,
   created_at INTEGER NOT NULL
 )
 ''';

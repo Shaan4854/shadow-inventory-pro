@@ -281,6 +281,8 @@ class _InventoryHeader extends StatelessWidget {
             onFilterSelected: provider.setFilter,
           ),
           SizedBox(height: AppConstants.spacing.md),
+          _RecentSuppliersRow(),
+          SizedBox(height: AppConstants.spacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
@@ -383,6 +385,81 @@ class _SortTile extends StatelessWidget {
         onTap();
         Navigator.pop(context);
       },
+    );
+  }
+}
+
+class _RecentSuppliersRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final supplierProvider = context.watch<SupplierProvider>();
+    final suppliers = supplierProvider.recentSuppliers;
+
+    if (suppliers.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Suppliers',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.suppliers),
+              child: const Text('View All', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 80,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: suppliers.length,
+            itemBuilder: (context, index) {
+              final s = suppliers[index];
+              return Padding(
+                padding: EdgeInsets.only(right: AppConstants.spacing.md),
+                child: InkWell(
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.supplierDetails,
+                    arguments: s,
+                  ),
+                  borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+                  child: Container(
+                    width: 70,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppConstants.colors.surface,
+                      borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+                      border: Border.all(color: AppConstants.colors.border),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          child: Text(s.name[0], style: const TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          s.name,
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

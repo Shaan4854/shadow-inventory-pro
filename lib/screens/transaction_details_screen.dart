@@ -164,6 +164,16 @@ class _FinancialSummary extends StatelessWidget {
             isBold: true,
             color: AppConstants.colors.primaryLight,
           ),
+          if (transaction.balanceAmount != 0) ...[
+            const Divider(height: 24),
+            _SummaryRow(label: 'Paid Amount', value: transaction.paidAmount),
+            _SummaryRow(
+              label: 'Remaining Balance',
+              value: transaction.balanceAmount,
+              color: AppConstants.colors.orange,
+              isBold: true,
+            ),
+          ],
         ],
       ),
     );

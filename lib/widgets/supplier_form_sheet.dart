@@ -42,6 +42,7 @@ class _SupplierFormSheetState extends State<SupplierFormSheet> {
   late TextEditingController _mobileController;
   late TextEditingController _emailController;
   late TextEditingController _addressController;
+  late TextEditingController _gstVatController;
   late TextEditingController _notesController;
 
   @override
@@ -53,6 +54,7 @@ class _SupplierFormSheetState extends State<SupplierFormSheet> {
     _mobileController = TextEditingController(text: widget.supplier?.mobile);
     _emailController = TextEditingController(text: widget.supplier?.email);
     _addressController = TextEditingController(text: widget.supplier?.address);
+    _gstVatController = TextEditingController(text: widget.supplier?.gstVat);
     _notesController = TextEditingController(text: widget.supplier?.notes);
   }
 
@@ -63,6 +65,7 @@ class _SupplierFormSheetState extends State<SupplierFormSheet> {
     _mobileController.dispose();
     _emailController.dispose();
     _addressController.dispose();
+    _gstVatController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -77,6 +80,7 @@ class _SupplierFormSheetState extends State<SupplierFormSheet> {
       mobile: _mobileController.text.trim(),
       email: _emailController.text.trim(),
       address: _addressController.text.trim(),
+      gstVat: _gstVatController.text.trim(),
       notes: _notesController.text.trim(),
       outstandingBalance: widget.supplier?.outstandingBalance ?? 0.0,
       createdAt: widget.supplier?.createdAt ?? DateTime.now(),
@@ -163,6 +167,14 @@ class _SupplierFormSheetState extends State<SupplierFormSheet> {
                   prefixIcon: Icon(Icons.location_on_outlined),
                 ),
                 maxLines: 2,
+              ),
+              SizedBox(height: AppConstants.spacing.md),
+              TextFormField(
+                controller: _gstVatController,
+                decoration: const InputDecoration(
+                  labelText: 'GST/VAT Number',
+                  prefixIcon: Icon(Icons.receipt_long_outlined),
+                ),
               ),
               SizedBox(height: AppConstants.spacing.md),
               TextFormField(

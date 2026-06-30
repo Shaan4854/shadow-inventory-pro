@@ -15,6 +15,8 @@ class Transaction extends Equatable {
     this.notes = '',
     this.paymentMethod = 'Cash',
     this.entityName = 'Walk-in Customer', // Customer or Supplier
+    this.entityId = '',
+    this.paidAmount = 0.0,
   });
 
   /// UUID primary key.
@@ -32,6 +34,12 @@ class Transaction extends Equatable {
   /// Final amount after discount.
   double get grandTotal => totalAmount - discount;
 
+  /// Amount paid at the time of transaction.
+  final double paidAmount;
+
+  /// Amount remaining (for credit).
+  double get balanceAmount => grandTotal - paidAmount;
+
   /// Internal notes.
   final String notes;
 
@@ -40,6 +48,9 @@ class Transaction extends Equatable {
 
   /// Customer name (for Sales) or Supplier name (for Purchases).
   final String entityName;
+
+  /// Link to Customer or Supplier ID.
+  final String entityId;
 
   /// When the transaction was finalized.
   final DateTime createdAt;
@@ -57,6 +68,8 @@ class Transaction extends Equatable {
       'notes': notes,
       'payment_method': paymentMethod,
       'entity_name': entityName,
+      'entity_id': entityId,
+      'paid_amount': paidAmount,
       'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
@@ -72,6 +85,8 @@ class Transaction extends Equatable {
       notes: map['notes'] as String? ?? '',
       paymentMethod: map['payment_method'] as String? ?? 'Cash',
       entityName: map['entity_name'] as String? ?? 'Walk-in Customer',
+      entityId: map['entity_id'] as String? ?? '',
+      paidAmount: (map['paid_amount'] as num?)?.toDouble() ?? 0.0,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
       items: items,
     );
@@ -86,6 +101,8 @@ class Transaction extends Equatable {
         notes,
         paymentMethod,
         entityName,
+        entityId,
+        paidAmount,
         createdAt,
         items,
       ];

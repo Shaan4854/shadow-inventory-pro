@@ -28,11 +28,14 @@ class _PosScreenState extends State<PosScreen> {
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _discountController =
       TextEditingController(text: '0');
+  final TextEditingController _paidAmountController =
+      TextEditingController(text: '0');
   String _paymentMethod = 'Cash';
 
   double get _subtotal => _cart.fold(0, (sum, item) => sum + item.total);
   double get _discount => double.tryParse(_discountController.text) ?? 0;
   double get _grandTotal => _subtotal - _discount;
+  double get _paidAmount => double.tryParse(_paidAmountController.text) ?? 0;
 
   double get _totalProfit {
     final provider = context.read<ProductProvider>();
@@ -136,6 +139,8 @@ class _PosScreenState extends State<PosScreen> {
       discount: _discount,
       notes: _notesController.text,
       entityName: _customerController.text,
+      entityId: _selectedCustomer?.id ?? '',
+      paidAmount: _paymentMethod == 'Credit' ? _paidAmount : (_subtotal - _discount),
       paymentMethod: _paymentMethod,
       createdAt: DateTime.now(),
       items: _cart
@@ -151,11 +156,14 @@ class _PosScreenState extends State<PosScreen> {
 
     await context.read<ProductProvider>().addTransaction(transaction);
 
-    if (_paymentMethod == 'Credit' && _selectedCustomer != null) {
-      if (mounted) {
-        await context
-            .read<CustomerProvider>()
-            .updateCustomerBalance(_selectedCustomer!.id, _grandTotal);
+    if (_selectedCustomer != null) {
+      final double balanceToUpdate = transaction.balanceAmount;
+      if (balanceToUpdate != 0) {
+        if (mounted) {
+          await context
+              .read<CustomerProvider>()
+              .updateCustomerBalance(_selectedCustomer!.id, balanceToUpdate);
+        }
       }
     }
 
@@ -221,6 +229,18 @@ class _PosScreenState extends State<PosScreen> {
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
                   ),
+                  if (_paymentMethod == 'Credit') ...[
+                    SizedBox(height: AppConstants.spacing.md),
+                    TextField(
+                      controller: _paidAmountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Amount Received (Partial Payment)',
+                        prefixText: AppConstants.currencySymbol,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
                   SizedBox(height: AppConstants.spacing.md),
                   TextField(
                     controller: _discountController,
