@@ -5,12 +5,12 @@ import '../models/product.dart';
 import '../providers/product_provider.dart';
 import '../utils/app_constants.dart';
 
-/// A modal sheet or dialog to quickly find and select a product.
+/// A modal sheet to allow continuous product selection for transactions.
 class ProductPicker extends StatefulWidget {
   const ProductPicker({
     required this.onSelected,
     this.showOutOfStock = true,
-    this.title = 'Select Product',
+    this.title = 'Add Products',
     super.key,
   });
 
@@ -22,7 +22,7 @@ class ProductPicker extends StatefulWidget {
     BuildContext context, {
     required ValueChanged<Product> onSelected,
     bool showOutOfStock = true,
-    String title = 'Select Product',
+    String title = 'Add Products',
   }) {
     return showModalBottomSheet(
       context: context,
@@ -70,7 +70,7 @@ class _ProductPickerState extends State<ProductPicker> {
     }).toList();
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
+      height: MediaQuery.of(context).size.height * 0.85,
       padding: EdgeInsets.all(AppConstants.spacing.page),
       child: Column(
         children: [
@@ -81,9 +81,13 @@ class _ProductPickerState extends State<ProductPicker> {
                 widget.title.toUpperCase(),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              IconButton(
+              TextButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppConstants.colors.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                child: const Text('DONE'),
               ),
             ],
           ),
@@ -108,8 +112,7 @@ class _ProductPickerState extends State<ProductPicker> {
             onChanged: (v) => setState(() => _query = v),
             onSubmitted: (v) {
               if (products.length == 1) {
-                widget.onSelected(products.first);
-                Navigator.pop(context);
+                _handleSelection(products.first);
               }
             },
           ),
@@ -143,15 +146,30 @@ class _ProductPickerState extends State<ProductPicker> {
                                 color: AppConstants.colors.primary,
                               ),
                         enabled: !isOutOfStock || widget.showOutOfStock,
-                        onTap: () {
-                          widget.onSelected(p);
-                          Navigator.pop(context);
-                        },
+                        onTap: () => _handleSelection(p),
                       );
                     },
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _handleSelection(Product product) {
+    widget.onSelected(product);
+    
+    // Visual feedback that item was added
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added ${product.name} to cart'),
+        duration: const Duration(milliseconds: 500),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.8,
+          left: 20,
+          right: 20,
+        ),
       ),
     );
   }
