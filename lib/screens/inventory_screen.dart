@@ -288,8 +288,6 @@ class _InventoryHeader extends StatelessWidget {
             selectedFilter: provider.selectedFilter,
             onFilterSelected: provider.setFilter,
           ),
-          SizedBox(height: AppConstants.spacing.lg),
-          const _RecentActivityPlaceholder(),
           SizedBox(height: AppConstants.spacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -369,46 +367,6 @@ class _InventoryHeader extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _RecentActivityPlaceholder extends StatelessWidget {
-  const _RecentActivityPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Activity',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        SizedBox(height: AppConstants.spacing.md),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppConstants.colors.surface,
-            borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-            border: Border.all(color: AppConstants.colors.border),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.auto_awesome_rounded,
-                color: AppConstants.colors.textMuted,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Coming in the next update.',
-                style: TextStyle(color: AppConstants.colors.textMuted),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
