@@ -411,10 +411,10 @@ class _FlowCarousel extends StatelessWidget {
               ),
               _FlowItem(
                 label: 'Reports',
-                subtitle: 'Coming Soon',
+                subtitle: 'Analysis',
                 icon: Icons.analytics_rounded,
                 color: AppConstants.colors.blue,
-                onTap: () => _showComingSoon(context),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.reports),
               ),
             ],
           ),
@@ -449,12 +449,6 @@ class _FlowCarousel extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reports module coming in Phase 9.')),
     );
   }
 }

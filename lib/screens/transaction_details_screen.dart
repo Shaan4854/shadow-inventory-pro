@@ -5,6 +5,7 @@ import '../models/transaction.dart';
 import '../models/transaction_item.dart';
 import '../utils/app_constants.dart';
 import '../widgets/status_badge.dart';
+import '../services/invoice_service.dart';
 
 class TransactionDetailsScreen extends StatelessWidget {
   const TransactionDetailsScreen({required this.transaction, super.key});
@@ -17,6 +18,12 @@ class TransactionDetailsScreen extends StatelessWidget {
       backgroundColor: AppConstants.colors.background,
       appBar: AppBar(
         title: const Text('TRANSACTION DETAILS'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print_rounded),
+            onPressed: () => InvoiceService.generateAndPrintInvoice(transaction),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppConstants.spacing.page),

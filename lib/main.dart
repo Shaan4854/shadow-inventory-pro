@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/customer_provider.dart';
 import 'providers/supplier_provider.dart';
+import 'providers/reports_provider.dart';
 import 'repositories/sqlite_product_repository.dart';
 import 'repositories/sqlite_customer_repository.dart';
 import 'repositories/sqlite_supplier_repository.dart';
@@ -36,6 +37,26 @@ class ShadowInventoryProApp extends StatelessWidget {
           create: (_) => SupplierProvider(
             supplierRepository: SQLiteSupplierRepository(),
           )..loadSuppliers(),
+        ),
+        ChangeNotifierProxyProvider3<ProductProvider, CustomerProvider,
+            SupplierProvider, ReportsProvider>(
+          create: (context) => ReportsProvider(
+            productProvider: context.read<ProductProvider>(),
+            customerProvider: context.read<CustomerProvider>(),
+            supplierProvider: context.read<SupplierProvider>(),
+          ),
+          update: (
+            context, 
+            productProvider, 
+            customerProvider, 
+            supplierProvider,
+            previous,
+          ) =>
+              ReportsProvider(
+            productProvider: productProvider,
+            customerProvider: customerProvider,
+            supplierProvider: supplierProvider,
+          ),
         ),
       ],
       child: MaterialApp(
