@@ -268,7 +268,6 @@ class _DetailsGrid extends StatelessWidget {
             label: 'Category',
             value: product.category.isEmpty ? 'General' : product.category,),
         const _Divider(),
-        const _RowItem(label: 'Supplier', value: 'Reliable Traders'), // Mock
       ],
     );
   }

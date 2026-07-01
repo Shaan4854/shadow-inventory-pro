@@ -17,7 +17,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String databaseName = 'shadow_inventory_pro.db';
-  static const int databaseVersion = 6;
+  static const int databaseVersion = 7;
 
   static const String productsTable = 'products';
   static const String categoriesTable = 'categories';
@@ -64,6 +64,7 @@ class DatabaseHelper {
     await db.execute(_createStockMovementsTableSql);
     await db.execute(_createCustomersTableSql);
     await db.execute(_createSuppliersTableSql);
+    await _addIndexes(db);
   }
 
   Future<void> _onUpgrade(
@@ -92,6 +93,37 @@ class DatabaseHelper {
       await db.execute(
           'ALTER TABLE $transactionsTable ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0',);
     }
+    if (oldVersion < 7) {
+      await _addIndexes(db);
+    }
+  }
+
+  Future<void> _addIndexes(sqlite.Database db) async {
+    // Products indexes
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_category ON $productsTable (category)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_sku ON $productsTable (sku)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_barcode ON $productsTable (barcode)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_stock ON $productsTable (stock)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_updated_at ON $productsTable (updated_at)');
+
+    // Transactions indexes
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON $transactionsTable (created_at)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_type ON $transactionsTable (type)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_entity_id ON $transactionsTable (entity_id)');
+
+    // Transaction items indexes
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON $transactionItemsTable (transaction_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_transaction_items_product_id ON $transactionItemsTable (product_id)');
+
+    // Stock movements indexes
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id ON $stockMovementsTable (product_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_created_at ON $stockMovementsTable (created_at)');
+
+    // Customers
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_customers_name ON $customersTable (name)');
+
+    // Suppliers
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_suppliers_name ON $suppliersTable (name)');
   }
 
   static const String _createProductsTableSql = '''
@@ -363,35 +395,54 @@ CREATE TABLE $suppliersTable (
     });
   }
 
+  /// Fetches all transactions with their items loaded via a single batch query.
+  /// Represents items as a map keyed by transaction_id to avoid N+1 queries.
   Future<List<model.Transaction>> getTransactions() async {
     final sqlite.Database db = await database;
-    final List<Map<String, Object?>> maps = await db.query(
+
+    // Single query for all transactions
+    final List<Map<String, Object?>> txMaps = await db.query(
       transactionsTable,
       orderBy: 'created_at DESC',
     );
 
-    final List<model.Transaction> transactions = [];
-    for (final map in maps) {
-      final String transactionId = map['id'] as String;
-      final List<Map<String, Object?>> itemMaps = await db.rawQuery('''
-        SELECT ti.*, p.name as product_name, p.emoji as product_emoji, p.unit as product_unit
-        FROM $transactionItemsTable ti
-        JOIN $productsTable p ON ti.product_id = p.id
-        WHERE ti.transaction_id = ?
-      ''', [transactionId],);
-
-      final items = itemMaps
-          .map((m) => TransactionItem.fromMap(
-                m,
-                productName: m['product_name'] as String?,
-                productEmoji: m['product_emoji'] as String?,
-                productUnit: m['product_unit'] as String?,
-              ),)
-          .toList();
-
-      transactions.add(model.Transaction.fromMap(map, items: items));
+    if (txMaps.isEmpty) {
+      return [];
     }
-    return transactions;
+
+    // Single batch query using a subquery to avoid SQLite's variable limit (999)
+    final List<Map<String, Object?>> allItemMaps = await db.rawQuery('''
+      SELECT ti.*, p.name as product_name, p.emoji as product_emoji, p.unit as product_unit
+      FROM $transactionItemsTable ti
+      JOIN $productsTable p ON ti.product_id = p.id
+      WHERE ti.transaction_id IN (
+        SELECT id FROM $transactionsTable ORDER BY created_at DESC
+      )
+      ORDER BY ti.id
+    ''');
+
+    // Group items by transaction_id
+    final Map<String, List<TransactionItem>> itemsByTxId = {};
+    for (final itemMap in allItemMaps) {
+      final String txId = itemMap['transaction_id'] as String;
+      itemsByTxId.putIfAbsent(txId, () => []).add(
+        TransactionItem.fromMap(
+          itemMap,
+          productName: itemMap['product_name'] as String?,
+          productEmoji: itemMap['product_emoji'] as String?,
+          productUnit: itemMap['product_unit'] as String?,
+        ),
+      );
+    }
+
+    // Assemble transactions with their items
+    return txMaps.map((map) {
+      final String txId = map['id'] as String;
+      return model.Transaction.fromMap(
+        map,
+        items: itemsByTxId[txId] ?? [],
+      );
+    }).toList();
   }
 
   // --- Stock Movements ---

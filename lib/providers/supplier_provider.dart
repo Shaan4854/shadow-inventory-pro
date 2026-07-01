@@ -18,9 +18,23 @@ class SupplierProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   List<Supplier> get recentSuppliers {
-    final sorted = List<Supplier>.from(_suppliers);
-    sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return sorted.take(5).toList();
+    // Avoid full-list sort: find top 5 by updatedAt using a partial scan
+    if (_suppliers.length <= 5) return List<Supplier>.from(_suppliers);
+    // Manual top-5 selection to avoid O(n log n) sort
+    final top5 = <Supplier>[];
+    Supplier? lowest;
+    for (final s in _suppliers) {
+      if (top5.length < 5) {
+        top5.add(s);
+        lowest = top5.reduce((a, b) => a.updatedAt.isBefore(b.updatedAt) ? a : b);
+      } else if (lowest != null && s.updatedAt.isAfter(lowest.updatedAt)) {
+        top5.remove(lowest);
+        top5.add(s);
+        lowest = top5.reduce((a, b) => a.updatedAt.isBefore(b.updatedAt) ? a : b);
+      }
+    }
+    top5.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return top5;
   }
 
   Future<void> loadSuppliers() async {

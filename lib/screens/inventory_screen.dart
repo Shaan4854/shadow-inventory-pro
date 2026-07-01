@@ -280,6 +280,8 @@ class _InventoryHeader extends StatelessWidget {
             selectedFilter: provider.selectedFilter,
             onFilterSelected: provider.setFilter,
           ),
+          SizedBox(height: AppConstants.spacing.lg),
+          const _FlowCarousel(),
           SizedBox(height: AppConstants.spacing.md),
           _RecentSuppliersRow(),
           SizedBox(height: AppConstants.spacing.md),
@@ -357,6 +359,159 @@ class _InventoryHeader extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _FlowCarousel extends StatelessWidget {
+  const _FlowCarousel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Business Flow',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        SizedBox(height: AppConstants.spacing.md),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _FlowItem(
+                label: 'Purchase',
+                subtitle: 'Add Stock',
+                icon: Icons.add_shopping_cart_rounded,
+                color: AppConstants.colors.primary,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.purchase),
+              ),
+              _FlowItem(
+                label: 'Stock',
+                subtitle: 'Adjustment',
+                icon: Icons.tune_rounded,
+                color: AppConstants.colors.purple,
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.stockAdjustment),
+              ),
+              _FlowItem(
+                label: 'Sell',
+                subtitle: 'POS System',
+                icon: Icons.sell_rounded,
+                color: AppConstants.colors.green,
+                onTap: () => Navigator.pushNamed(context, AppRoutes.pos),
+              ),
+              _FlowItem(
+                label: 'Return',
+                subtitle: 'Any Type',
+                icon: Icons.assignment_return_rounded,
+                color: AppConstants.colors.orange,
+                onTap: () => _showReturnMenu(context),
+              ),
+              _FlowItem(
+                label: 'Reports',
+                subtitle: 'Coming Soon',
+                icon: Icons.analytics_rounded,
+                color: AppConstants.colors.blue,
+                onTap: () => _showComingSoon(context),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showReturnMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.keyboard_return_rounded),
+              title: const Text('Sales Return (from Customer)'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.salesReturn);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment_return_rounded),
+              title: const Text('Purchase Return (to Supplier)'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.purchaseReturn);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Reports module coming in Phase 9.')),
+    );
+  }
+}
+
+class _FlowItem extends StatelessWidget {
+  const _FlowItem({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(right: AppConstants.spacing.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+        child: Container(
+          width: 100,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppConstants.colors.surface,
+            borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+            border: Border.all(color: AppConstants.colors.border),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

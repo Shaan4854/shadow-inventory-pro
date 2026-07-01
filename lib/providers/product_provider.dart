@@ -33,6 +33,15 @@ class ProductProvider extends ChangeNotifier {
   String? _errorMessage;
   String? _alertMessage;
 
+  // --- Cached computed values ---
+  bool _cacheValid = false;
+  int _cachedTotalStock = 0;
+  double _cachedTotalBuyValue = 0.0;
+  double _cachedTotalSellValue = 0.0;
+  double _cachedTodayProfit = 0.0;
+  int _cachedOutOfStockCount = 0;
+  int _cachedLowStockCount = 0;
+
   /// All products currently loaded from persistence.
   UnmodifiableListView<Product> get products {
     return UnmodifiableListView<Product>(_products);
@@ -92,28 +101,20 @@ class ProductProvider extends ChangeNotifier {
 
   /// Total current stock quantity across all products.
   int get totalStock {
-    return _products.fold<int>(
-        0, (int total, Product product) => total + product.stock,);
+    _ensureCacheValid();
+    return _cachedTotalStock;
   }
 
   /// Total current purchase value of stock.
   double get totalBuyValue {
-    return _products.fold<double>(
-      0,
-      (double total, Product product) {
-        return total + (product.buyPrice * product.stock);
-      },
-    );
+    _ensureCacheValid();
+    return _cachedTotalBuyValue;
   }
 
   /// Total current selling value of stock.
   double get totalSellValue {
-    return _products.fold<double>(
-      0,
-      (double total, Product product) {
-        return total + (product.sellPrice * product.stock);
-      },
-    );
+    _ensureCacheValid();
+    return _cachedTotalSellValue;
   }
 
   /// Total projected profit for current stock.
@@ -121,50 +122,91 @@ class ProductProvider extends ChangeNotifier {
 
   /// Total profit from transactions today.
   double get todayProfit {
+    _ensureCacheValid();
+    return _cachedTodayProfit;
+  }
+
+  void _ensureCacheValid() {
+    if (_cacheValid) {
+      return;
+    }
+
+    int totalStock = 0;
+    double totalBuyValue = 0.0;
+    double totalSellValue = 0.0;
+    int outOfStockCount = 0;
+    int lowStockCount = 0;
+
+    for (final product in _products) {
+      totalStock += product.stock;
+      totalBuyValue += product.buyPrice * product.stock;
+      totalSellValue += product.sellPrice * product.stock;
+      if (product.stock == 0) {
+        outOfStockCount++;
+      }
+      if (_isLowStock(product)) {
+        lowStockCount++;
+      }
+    }
+
+    _cachedTotalStock = totalStock;
+    _cachedTotalBuyValue = totalBuyValue;
+    _cachedTotalSellValue = totalSellValue;
+    _cachedOutOfStockCount = outOfStockCount;
+    _cachedLowStockCount = lowStockCount;
+
+    // Compute today's profit
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    double todayProfit = 0.0;
 
-    return _transactions
-        .where((tx) => tx.createdAt.isAfter(today))
-        .where((tx) =>
-            tx.type == TransactionType.sale ||
-            tx.type == TransactionType.salesReturn,)
-        .fold<double>(0.0, (sum, tx) {
+    for (final tx in _transactions) {
+      if (!tx.createdAt.isAfter(today)) {
+        continue;
+      }
+      if (tx.type != TransactionType.sale &&
+          tx.type != TransactionType.salesReturn) {
+        continue;
+      }
+
       double txProfit = 0;
-      for (var item in tx.items) {
-        final product = _products.firstWhere((p) => p.id == item.productId,
-            orElse: () => _emptyProduct,);
-        if (product.id.isNotEmpty) {
+      for (final item in tx.items) {
+        Product? product;
+        for (final p in _products) {
+          if (p.id == item.productId) {
+            product = p;
+            break;
+          }
+        }
+        if (product != null) {
           txProfit += (item.priceAtTime - product.buyPrice) * item.quantity;
         }
       }
       if (tx.type == TransactionType.salesReturn) {
-        return sum - (txProfit - tx.discount);
+        todayProfit -= (txProfit - tx.discount);
+      } else {
+        todayProfit += (txProfit - tx.discount);
       }
-      return sum + (txProfit - tx.discount);
-    });
+    }
+
+    _cachedTodayProfit = todayProfit;
+    _cacheValid = true;
   }
 
-  static final Product _emptyProduct = Product(
-    id: '',
-    name: '',
-    buyPrice: 0,
-    sellPrice: 0,
-    stock: 0,
-    alertThreshold: 0,
-    emoji: '',
-    createdAt: DateTime.now(),
-    updatedAt: DateTime.now(),
-  );
+  void _invalidateCache() {
+    _cacheValid = false;
+  }
 
   /// Number of products with zero stock.
   int get outOfStockCount {
-    return _products.where((Product product) => product.stock == 0).length;
+    _ensureCacheValid();
+    return _cachedOutOfStockCount;
   }
 
   /// Number of products below their own low-stock alert threshold.
   int get lowStockCount {
-    return _products.where(_isLowStock).length;
+    _ensureCacheValid();
+    return _cachedLowStockCount;
   }
 
   /// Returns the unit profit for a product.
@@ -210,6 +252,8 @@ class ProductProvider extends ChangeNotifier {
       _movements
         ..clear()
         ..addAll(results[3] as List<StockMovement>);
+
+      _invalidateCache();
     } catch (error) {
       _setError('Unable to load inventory data.');
     } finally {
@@ -222,37 +266,88 @@ class ProductProvider extends ChangeNotifier {
     await loadAllData();
   }
 
-  /// Adds a transaction and refreshes local state.
+  /// Computes the stock quantity change for a transaction item based on type.
+  int _quantityChangeFor(TransactionType type, int quantity) {
+    return switch (type) {
+      TransactionType.purchase || TransactionType.salesReturn => quantity,
+      TransactionType.sale || TransactionType.purchaseReturn => -quantity,
+      TransactionType.adjustment => quantity,
+    };
+  }
+
+  /// Adds a transaction and applies targeted local state updates.
   Future<void> addTransaction(Transaction transaction) async {
-    _setLoading(true);
     _clearErrorSilently();
 
     try {
       await _productRepository.addTransaction(transaction);
-      // Reload everything to ensure stock and history are synced
-      await loadAllData();
+
+      // Update product stock levels locally based on transaction items
+      for (final item in transaction.items) {
+        final int quantityChange =
+            _quantityChangeFor(transaction.type, item.quantity);
+        final int index = _products.indexWhere((p) => p.id == item.productId);
+        if (index != -1) {
+          _products[index] = _products[index].copyWith(
+            stock: _products[index].stock + quantityChange,
+            updatedAt: transaction.createdAt,
+          );
+        }
+      }
+
+      // Prepend the new transaction
+      _transactions.insert(0, transaction);
+
+      // Create stock movements for the new transaction
+      final DateTime now = transaction.createdAt;
+      for (final item in transaction.items) {
+        final int quantityChange =
+            _quantityChangeFor(transaction.type, item.quantity);
+        _movements.insert(0, StockMovement(
+          id: '${now.microsecondsSinceEpoch}_${item.productId}',
+          productId: item.productId,
+          transactionId: transaction.id,
+          type: transaction.type,
+          quantityChange: quantityChange,
+          reason: transaction.notes,
+          createdAt: now,
+          productName: item.productName,
+          productEmoji: item.productEmoji,
+        ),);
+      }
+
+      _invalidateCache();
       _alertMessage = 'Transaction saved successfully.';
+      notifyListeners();
     } catch (error) {
       _setError('Unable to save transaction.');
-    } finally {
-      _setLoading(false);
     }
   }
 
-  /// Adds a stock movement (manual adjustment) and refreshes local state.
+  /// Adds a stock movement and applies targeted local state updates.
   Future<void> addStockMovement(StockMovement movement) async {
-    _setLoading(true);
     _clearErrorSilently();
 
     try {
       await _productRepository.addStockMovement(movement);
-      // Reload everything
-      await loadAllData();
+
+      // Update product stock locally
+      final index = _products.indexWhere((p) => p.id == movement.productId);
+      if (index != -1) {
+        _products[index] = _products[index].copyWith(
+          stock: _products[index].stock + movement.quantityChange,
+          updatedAt: movement.createdAt,
+        );
+      }
+
+      // Prepend movement
+      _movements.insert(0, movement);
+
+      _invalidateCache();
       _alertMessage = 'Stock adjusted successfully.';
+      notifyListeners();
     } catch (error) {
       _setError('Unable to adjust stock.');
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -271,6 +366,7 @@ class ProductProvider extends ChangeNotifier {
         _categories.add(product.category);
       }
 
+      _invalidateCache();
       notifyListeners();
     } catch (error) {
       _setError('Unable to add product.');
@@ -290,7 +386,7 @@ class ProductProvider extends ChangeNotifier {
         final Product oldProduct = _products[index];
         if (oldProduct.imagePath != null &&
             oldProduct.imagePath != product.imagePath) {
-          _deleteImageFile(oldProduct.imagePath);
+          await _deleteImageFile(oldProduct.imagePath);
         }
         _products[index] = product;
       } else {
@@ -306,6 +402,7 @@ class ProductProvider extends ChangeNotifier {
         _categories.add(product.category);
       }
 
+      _invalidateCache();
       notifyListeners();
     } catch (error) {
       _setError('Unable to update product.');
@@ -324,12 +421,13 @@ class ProductProvider extends ChangeNotifier {
       if (index != -1) {
         final Product product = _products[index];
         if (product.imagePath != null) {
-          _deleteImageFile(product.imagePath);
+          await _deleteImageFile(product.imagePath);
         }
         _products.removeAt(index);
       }
 
       await _productRepository.deleteProduct(productId);
+      _invalidateCache();
       notifyListeners();
     } catch (error) {
       _setError('Unable to delete product.');
@@ -353,15 +451,15 @@ class ProductProvider extends ChangeNotifier {
         .any((Product p) => p.barcode == barcode && p.id != excludeId);
   }
 
-  void _deleteImageFile(String? path) {
+  Future<void> _deleteImageFile(String? path) async {
     if (path == null || path.isEmpty) {
       return;
     }
 
     try {
       final File file = File(path);
-      if (file.existsSync()) {
-        file.deleteSync();
+      if (await file.exists()) {
+        await file.delete();
       }
     } catch (error) {
       debugPrint('Error deleting image file: $error');
