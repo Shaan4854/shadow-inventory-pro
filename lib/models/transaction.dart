@@ -12,6 +12,7 @@ class Transaction extends Equatable {
     required this.createdAt,
     this.items = const <TransactionItem>[],
     this.discount = 0,
+    this.taxAmount = 0,
     this.notes = '',
     this.paymentMethod = 'Cash',
     this.entityName = 'Walk-in Customer', // Customer or Supplier
@@ -25,14 +26,17 @@ class Transaction extends Equatable {
   /// Nature of the transaction.
   final TransactionType type;
 
-  /// Calculated subtotal (before discount).
+  /// Calculated subtotal (before discount and tax).
   final double totalAmount;
 
-  /// Applied discount.
+  /// Applied global discount.
   final double discount;
 
-  /// Final amount after discount.
-  double get grandTotal => totalAmount - discount;
+  /// Applied global tax.
+  final double taxAmount;
+
+  /// Final amount after discount and tax.
+  double get grandTotal => totalAmount - discount + taxAmount;
 
   /// Amount paid at the time of transaction.
   final double paidAmount;
@@ -65,6 +69,7 @@ class Transaction extends Equatable {
       'type': type.name,
       'total_amount': totalAmount,
       'discount': discount,
+      'tax_amount': taxAmount,
       'notes': notes,
       'payment_method': paymentMethod,
       'entity_name': entityName,
@@ -82,6 +87,7 @@ class Transaction extends Equatable {
       type: TransactionType.values.byName(map['type'] as String),
       totalAmount: (map['total_amount'] as num).toDouble(),
       discount: (map['discount'] as num).toDouble(),
+      taxAmount: (map['tax_amount'] as num?)?.toDouble() ?? 0.0,
       notes: map['notes'] as String? ?? '',
       paymentMethod: map['payment_method'] as String? ?? 'Cash',
       entityName: map['entity_name'] as String? ?? 'Walk-in Customer',
@@ -98,6 +104,7 @@ class Transaction extends Equatable {
         type,
         totalAmount,
         discount,
+        taxAmount,
         notes,
         paymentMethod,
         entityName,

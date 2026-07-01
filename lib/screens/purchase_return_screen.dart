@@ -9,6 +9,8 @@ import '../providers/product_provider.dart';
 import '../providers/supplier_provider.dart';
 import '../utils/app_constants.dart';
 import '../widgets/transaction_card.dart';
+import '../widgets/commerce_cart_item.dart';
+import '../widgets/transaction_summary.dart';
 
 class PurchaseReturnScreen extends StatefulWidget {
   const PurchaseReturnScreen({super.key});
@@ -22,11 +24,14 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
   final List<TransactionItem> _returnItems = [];
   final TextEditingController _reasonController = TextEditingController();
 
+  int get _itemCount => _returnItems.where((i) => i.quantity > 0).length;
+  int get _totalQuantity => _returnItems.fold(0, (sum, item) => sum + item.quantity);
+  double get _subtotal => _returnItems.fold(0, (sum, item) => sum + item.total);
+
   void _selectTransaction(Transaction tx) {
     setState(() {
       _originalTransaction = tx;
       _returnItems.clear();
-      // Initialize return items with zero quantity
       for (var item in tx.items) {
         _returnItems.add(TransactionItem(
           id: const Uuid().v4(),
@@ -34,6 +39,8 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
           productId: item.productId,
           quantity: 0,
           priceAtTime: item.priceAtTime,
+          discount: item.discount,
+          tax: item.tax,
           productName: item.productName,
           productEmoji: item.productEmoji,
           productUnit: item.productUnit,
@@ -59,6 +66,8 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
         productId: item.productId,
         quantity: quantity,
         priceAtTime: item.priceAtTime,
+        discount: (item.priceAtTime > 0) ? (originalItem.discount / originalItem.quantity) * quantity : 0,
+        tax: (item.priceAtTime > 0) ? (originalItem.tax / originalItem.quantity) * quantity : 0,
         productName: item.productName,
         productEmoji: item.productEmoji,
         productUnit: item.productUnit,
@@ -79,12 +88,12 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
     final returnTx = Transaction(
       id: transactionId,
       type: TransactionType.purchaseReturn,
-      totalAmount: activeItems.fold(0, (sum, item) => sum + item.total),
+      totalAmount: _subtotal,
       discount: 0,
       notes: _reasonController.text,
       entityName: _originalTransaction!.entityName,
       entityId: _originalTransaction!.entityId,
-      paidAmount: 0, // Returns are usually adjustments to balance
+      paidAmount: 0,
       createdAt: DateTime.now(),
       items: activeItems
           .map((item) => TransactionItem(
@@ -93,6 +102,8 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
                 productId: item.productId,
                 quantity: item.quantity,
                 priceAtTime: item.priceAtTime,
+                discount: item.discount,
+                tax: item.tax,
               ),)
           .toList(),
     );
@@ -101,7 +112,6 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
     
     if (returnTx.entityId.isNotEmpty) {
       if (mounted) {
-        // Return amount decreases outstanding balance (what we owe)
         await context.read<SupplierProvider>().updateSupplierBalance(
           returnTx.entityId,
           -returnTx.grandTotal,
@@ -124,13 +134,75 @@ class _PurchaseReturnScreenState extends State<PurchaseReturnScreen> {
       body: _originalTransaction == null
           ? _TransactionPicker(
               onSelected: _selectTransaction, type: TransactionType.purchase,)
-          : _ReturnForm(
-              original: _originalTransaction!,
-              returnItems: _returnItems,
-              reasonController: _reasonController,
-              onQuantityChanged: _updateReturnQuantity,
-              onCancel: () => setState(() => _originalTransaction = null),
-              onConfirm: _processReturn,
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(AppConstants.spacing.page),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Original Purchase',
+                                style: TextStyle(fontWeight: FontWeight.bold),),
+                            TextButton(
+                                onPressed: () => setState(() => _originalTransaction = null), 
+                                child: const Text('Change'),),
+                          ],
+                        ),
+                        Text('Supplier: ${_originalTransaction!.entityName}',
+                            style: TextStyle(color: AppConstants.colors.textSecondary),),
+                        Text('Date: ${_originalTransaction!.createdAt.toString().split('.')[0]}',
+                            style: TextStyle(color: AppConstants.colors.textSecondary),),
+                        const Divider(height: 32),
+                        const Text('SELECT ITEMS TO RETURN',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,),),
+                        SizedBox(height: AppConstants.spacing.md),
+                        ..._returnItems.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final returnItem = entry.value;
+
+                          return CommerceCartItem(
+                            item: returnItem,
+                            canEditPrice: false,
+                            onQuantityChanged: (q) => _updateReturnQuantity(index, q),
+                            onRemove: () => _updateReturnQuantity(index, 0),
+                          );
+                        }),
+                        SizedBox(height: AppConstants.spacing.lg),
+                        TextField(
+                          controller: _reasonController,
+                          decoration:
+                              const InputDecoration(labelText: 'Reason for return'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                TransactionSummary(
+                  itemCount: _itemCount,
+                  totalQuantity: _totalQuantity,
+                  subtotal: _subtotal,
+                  discount: 0,
+                  tax: 0,
+                  grandTotal: _subtotal,
+                ),
+                Container(
+                  padding: EdgeInsets.all(AppConstants.spacing.page),
+                  color: AppConstants.colors.surface,
+                  child: FilledButton(
+                    onPressed: _processReturn,
+                    style:
+                        FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                    child: const Text('CONFIRM RETURN'),
+                  ),
+                ),
+              ],
             ),
     );
   }
@@ -162,143 +234,6 @@ class _TransactionPicker extends StatelessWidget {
           onTap: () => onSelected(transactions[index]),
         );
       },
-    );
-  }
-}
-
-class _ReturnForm extends StatelessWidget {
-  const _ReturnForm({
-    required this.original,
-    required this.returnItems,
-    required this.reasonController,
-    required this.onQuantityChanged,
-    required this.onCancel,
-    required this.onConfirm,
-  });
-
-  final Transaction original;
-  final List<TransactionItem> returnItems;
-  final TextEditingController reasonController;
-  final void Function(int, int) onQuantityChanged;
-  final VoidCallback onCancel;
-  final VoidCallback onConfirm;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(AppConstants.spacing.page),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Original Transaction',
-                        style: TextStyle(fontWeight: FontWeight.bold),),
-                    TextButton(
-                        onPressed: onCancel, child: const Text('Change'),),
-                  ],
-                ),
-                Text('Supplier: ${original.entityName}',
-                    style: TextStyle(color: AppConstants.colors.textSecondary),),
-                Text('Date: ${original.createdAt.toString().split('.')[0]}',
-                    style: TextStyle(color: AppConstants.colors.textSecondary),),
-                const Divider(height: 32),
-                const Text('SELECT ITEMS TO RETURN',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,),),
-                SizedBox(height: AppConstants.spacing.md),
-                ...original.items.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final originalItem = entry.value;
-                  final returnItem = returnItems[index];
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppConstants.colors.surface,
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radii.md),
-                      border: Border.all(color: AppConstants.colors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(originalItem.productEmoji,
-                            style: const TextStyle(fontSize: 20),),
-                        SizedBox(width: AppConstants.spacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(originalItem.productName,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,),),
-                              Text('Purchased: ${originalItem.quantity}',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppConstants.colors.textMuted,),),
-                            ],
-                          ),
-                        ),
-                        _QuantitySelector(
-                          value: returnItem.quantity,
-                          max: originalItem.quantity,
-                          onChanged: (q) => onQuantityChanged(index, q),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                SizedBox(height: AppConstants.spacing.lg),
-                TextField(
-                  controller: reasonController,
-                  decoration:
-                      const InputDecoration(labelText: 'Reason for return'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.all(AppConstants.spacing.page),
-          color: AppConstants.colors.surface,
-          child: FilledButton(
-            onPressed: onConfirm,
-            style:
-                FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-            child: const Text('CONFIRM RETURN'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuantitySelector extends StatelessWidget {
-  const _QuantitySelector(
-      {required this.value, required this.max, required this.onChanged,});
-  final int value;
-  final int max;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-            onPressed: value > 0 ? () => onChanged(value - 1) : null,
-            icon: const Icon(Icons.remove_circle_outline),),
-        Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
-        IconButton(
-            onPressed: value < max ? () => onChanged(value + 1) : null,
-            icon: const Icon(Icons.add_circle_outline),),
-      ],
     );
   }
 }

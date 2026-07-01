@@ -127,7 +127,7 @@ class _ItemsList extends StatelessWidget {
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600),),
                         Text(
-                          '${item.quantity} x ${AppConstants.currencySymbol}${item.priceAtTime}',
+                          '${item.quantity} x ${AppConstants.currencySymbol}${item.priceAtTime}${item.discount > 0 ? " (-${AppConstants.currencySymbol}${item.discount})" : ""}',
                           style: TextStyle(
                               color: AppConstants.colors.textSecondary,
                               fontSize: 12,),
@@ -164,6 +164,7 @@ class _FinancialSummary extends StatelessWidget {
           _SummaryRow(label: 'Subtotal', value: transaction.totalAmount),
           _SummaryRow(
               label: 'Discount', value: transaction.discount, isNegative: true,),
+          _SummaryRow(label: 'Tax', value: transaction.taxAmount),
           const Divider(height: 24),
           _SummaryRow(
             label: 'Total Amount',

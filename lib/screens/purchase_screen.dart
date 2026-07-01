@@ -10,8 +10,9 @@ import '../models/transaction_type.dart';
 import '../providers/product_provider.dart';
 import '../providers/supplier_provider.dart';
 import '../utils/app_constants.dart';
-import '../widgets/payment_summary.dart';
-import '../widgets/quantity_stepper.dart';
+import '../widgets/product_picker.dart';
+import '../widgets/commerce_cart_item.dart';
+import '../widgets/transaction_summary.dart';
 import '../widgets/supplier_form_sheet.dart';
 
 class PurchaseScreen extends StatefulWidget {
@@ -27,25 +28,30 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   final TextEditingController _entityController =
       TextEditingController(text: 'Primary Supplier');
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _discountController =
+  final TextEditingController _globalDiscountController =
       TextEditingController(text: '0');
+  final TextEditingController _taxController = TextEditingController(text: '0');
   final TextEditingController _transportController =
       TextEditingController(text: '0');
   final TextEditingController _paidAmountController =
       TextEditingController(text: '0');
   String _paymentMethod = 'Cash';
 
+  int get _itemCount => _items.length;
+  int get _totalQuantity => _items.fold(0, (sum, item) => sum + item.quantity);
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.total);
-  double get _discount => double.tryParse(_discountController.text) ?? 0;
+  double get _globalDiscount => double.tryParse(_globalDiscountController.text) ?? 0;
+  double get _taxAmount => double.tryParse(_taxController.text) ?? 0;
   double get _transport => double.tryParse(_transportController.text) ?? 0;
-  double get _grandTotal => _subtotal - _discount + _transport;
+  double get _grandTotal => _subtotal - _globalDiscount + _taxAmount + _transport;
   double get _paidAmount => double.tryParse(_paidAmountController.text) ?? 0;
 
   @override
   void dispose() {
     _entityController.dispose();
     _notesController.dispose();
-    _discountController.dispose();
+    _globalDiscountController.dispose();
+    _taxController.dispose();
     _transportController.dispose();
     _paidAmountController.dispose();
     super.dispose();
@@ -63,6 +69,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           productId: existing.productId,
           quantity: existing.quantity + 1,
           priceAtTime: existing.priceAtTime,
+          discount: existing.discount,
+          tax: existing.tax,
           productName: existing.productName,
           productEmoji: existing.productEmoji,
           productUnit: existing.productUnit,
@@ -94,12 +102,60 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
           productId: item.productId,
           quantity: quantity,
           priceAtTime: item.priceAtTime,
+          discount: item.discount,
+          tax: item.tax,
           productName: item.productName,
           productEmoji: item.productEmoji,
           productUnit: item.productUnit,
         );
       }
     });
+  }
+
+  Future<void> _editItemValue(int index, {required bool isPrice}) async {
+    final item = _items[index];
+    final controller = TextEditingController(
+      text: (isPrice ? item.priceAtTime : item.discount).toString(),
+    );
+    
+    final result = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isPrice ? 'Edit Cost Price' : 'Edit Line Discount'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            prefixText: AppConstants.currencySymbol,
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, double.tryParse(controller.text)),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _items[index] = TransactionItem(
+          id: item.id,
+          transactionId: item.transactionId,
+          productId: item.productId,
+          quantity: item.quantity,
+          priceAtTime: isPrice ? result : item.priceAtTime,
+          discount: isPrice ? item.discount : result,
+          tax: item.tax,
+          productName: item.productName,
+          productEmoji: item.productEmoji,
+          productUnit: item.productUnit,
+        );
+      });
+    }
   }
 
   Future<void> _savePurchase() async {
@@ -115,11 +171,12 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       id: transactionId,
       type: TransactionType.purchase,
       totalAmount: _subtotal + _transport,
-      discount: _discount,
+      discount: _globalDiscount,
+      taxAmount: _taxAmount,
       notes: _notesController.text,
       entityName: _entityController.text,
       entityId: _selectedSupplier?.id ?? '',
-      paidAmount: _paymentMethod == 'Credit' ? _paidAmount : (_subtotal + _transport - _discount),
+      paidAmount: _paymentMethod == 'Credit' ? _paidAmount : _grandTotal,
       paymentMethod: _paymentMethod,
       createdAt: DateTime.now(),
       items: _items
@@ -129,6 +186,8 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                 productId: item.productId,
                 quantity: item.quantity,
                 priceAtTime: item.priceAtTime,
+                discount: item.discount,
+                tax: item.tax,
               ),)
           .toList(),
     );
@@ -159,9 +218,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
         title: const Text('NEW PURCHASE'),
         actions: [
           IconButton(
-            onPressed: _savePurchase,
-            icon: const Icon(Icons.check_rounded),
-            color: AppConstants.colors.green,
+            onPressed: () => ProductPicker.show(context, onSelected: _addItem),
+            icon: const Icon(Icons.add_shopping_cart_rounded),
+            tooltip: 'Add Product',
           ),
         ],
       ),
@@ -228,13 +287,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     ),
                   ],
                   SizedBox(height: AppConstants.spacing.lg),
-                  _SectionHeader(
-                    title: 'Products',
-                    trailing: IconButton(
-                      onPressed: () => _showProductPicker(context),
-                      icon: const Icon(Icons.add_circle_outline_rounded),
-                      color: AppConstants.colors.primary,
-                    ),
+                  _CartHeader(
+                    itemCount: _items.length,
+                    onClear: () => setState(() => _items.clear()),
                   ),
                   if (_items.isEmpty)
                     const Center(
@@ -244,10 +299,12 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                       ),
                     )
                   else
-                    ..._items.asMap().entries.map((entry) => _PurchaseItemTile(
+                    ..._items.asMap().entries.map((entry) => CommerceCartItem(
                           item: entry.value,
-                          onQuantityChanged: (q) =>
-                              _updateQuantity(entry.key, q),
+                          onQuantityChanged: (q) => _updateQuantity(entry.key, q),
+                          onRemove: () => setState(() => _items.removeAt(entry.key)),
+                          onPriceEdit: () => _editItemValue(entry.key, isPrice: true),
+                          onDiscountEdit: () => _editItemValue(entry.key, isPrice: false),
                         ),),
                   SizedBox(height: AppConstants.spacing.lg),
                   const _SectionHeader(title: 'Additional info'),
@@ -255,10 +312,10 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: _discountController,
+                          controller: _globalDiscountController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Discount',
+                            labelText: 'Global Discount',
                             prefixText: AppConstants.currencySymbol,
                           ),
                           onChanged: (_) => setState(() {}),
@@ -267,16 +324,26 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                       SizedBox(width: AppConstants.spacing.md),
                       Expanded(
                         child: TextField(
-                          controller: _transportController,
+                          controller: _taxController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Transport',
+                            labelText: 'Tax Amount',
                             prefixText: AppConstants.currencySymbol,
                           ),
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: AppConstants.spacing.md),
+                  TextField(
+                    controller: _transportController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Transport / Shipping Cost',
+                      prefixText: AppConstants.currencySymbol,
+                    ),
+                    onChanged: (_) => setState(() {}),
                   ),
                   SizedBox(height: AppConstants.spacing.md),
                   TextField(
@@ -291,26 +358,35 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
               ),
             ),
           ),
-          PaymentSummary(
+          TransactionSummary(
+            itemCount: _itemCount,
+            totalQuantity: _totalQuantity,
             subtotal: _subtotal + _transport,
-            discount: _discount,
+            discount: _globalDiscount,
+            tax: _taxAmount,
             grandTotal: _grandTotal,
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              AppConstants.spacing.page,
+              0,
+              AppConstants.spacing.page,
+              AppConstants.spacing.page,
+            ),
+            color: AppConstants.colors.surface,
+            child: FilledButton(
+              onPressed: _savePurchase,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radii.md),),
+              ),
+              child: const Text('SAVE PURCHASE',
+                  style: TextStyle(fontWeight: FontWeight.bold),),
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showProductPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppConstants.colors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppConstants.radii.sheet),),
-      ),
-      builder: (_) => _ProductPicker(onSelected: _addItem),
     );
   }
 
@@ -362,55 +438,34 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _PurchaseItemTile extends StatelessWidget {
-  const _PurchaseItemTile(
-      {required this.item, required this.onQuantityChanged,});
+class _CartHeader extends StatelessWidget {
+  const _CartHeader({required this.itemCount, required this.onClear});
 
-  final TransactionItem item;
-  final ValueChanged<int> onQuantityChanged;
+  final int itemCount;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: AppConstants.spacing.md),
-      padding: EdgeInsets.all(AppConstants.spacing.md),
-      decoration: BoxDecoration(
-        color: AppConstants.colors.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-        border: Border.all(color: AppConstants.colors.border),
-      ),
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppConstants.spacing.md),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppConstants.colors.background,
-              borderRadius: BorderRadius.circular(AppConstants.radii.md),
-            ),
-            alignment: Alignment.center,
-            child:
-                Text(item.productEmoji, style: const TextStyle(fontSize: 20)),
-          ),
-          SizedBox(width: AppConstants.spacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.productName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),),
-                Text(
-                  '${AppConstants.currencySymbol}${item.priceAtTime} / ${item.productUnit}',
-                  style: TextStyle(
-                      color: AppConstants.colors.textSecondary, fontSize: 12,),
-                ),
-              ],
+          Text(
+            'PURCHASE ITEMS ($itemCount)',
+            style: TextStyle(
+              color: AppConstants.colors.textMuted,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              fontSize: 12,
             ),
           ),
-          QuantityStepper(
-            value: item.quantity,
-            onChanged: onQuantityChanged,
-          ),
+          if (itemCount > 0)
+            TextButton(
+              onPressed: onClear,
+              child: Text('Clear All',
+                  style: TextStyle(color: AppConstants.colors.red),),
+            ),
         ],
       ),
     );
@@ -489,63 +544,6 @@ class _SupplierPickerState extends State<_SupplierPicker> {
                       );
                     },
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProductPicker extends StatefulWidget {
-  const _ProductPicker({required this.onSelected});
-
-  final ValueChanged<Product> onSelected;
-
-  @override
-  State<_ProductPicker> createState() => _ProductPickerState();
-}
-
-class _ProductPickerState extends State<_ProductPicker> {
-  String _query = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final products = context.watch<ProductProvider>().products.where((p) {
-      return p.name.toLowerCase().contains(_query.toLowerCase()) ||
-          p.sku.toLowerCase().contains(_query.toLowerCase());
-    }).toList();
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      padding: EdgeInsets.all(AppConstants.spacing.page),
-      child: Column(
-        children: [
-          TextField(
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Search product...',
-              prefixIcon: Icon(Icons.search_rounded),
-            ),
-            onChanged: (v) => setState(() => _query = v),
-          ),
-          SizedBox(height: AppConstants.spacing.md),
-          Expanded(
-            child: ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final p = products[index];
-                return ListTile(
-                  leading: Text(p.emoji, style: const TextStyle(fontSize: 24)),
-                  title: Text(p.name),
-                  subtitle: Text('${AppConstants.currencySymbol}${p.buyPrice}'),
-                  trailing: const Icon(Icons.add_circle_outline_rounded),
-                  onTap: () {
-                    widget.onSelected(p);
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),

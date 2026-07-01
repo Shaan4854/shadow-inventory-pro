@@ -17,7 +17,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String databaseName = 'shadow_inventory_pro.db';
-  static const int databaseVersion = 7;
+  static const int databaseVersion = 8;
 
   static const String productsTable = 'products';
   static const String categoriesTable = 'categories';
@@ -68,12 +68,17 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(
-      sqlite.Database db, int oldVersion, int newVersion,) async {
+    sqlite.Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     if (oldVersion < 2) {
       await db.execute(
-          'ALTER TABLE $productsTable ADD COLUMN brand TEXT NOT NULL DEFAULT ""',);
+        'ALTER TABLE $productsTable ADD COLUMN brand TEXT NOT NULL DEFAULT ""',
+      );
       await db.execute(
-          'ALTER TABLE $productsTable ADD COLUMN unit TEXT NOT NULL DEFAULT "pcs"',);
+        'ALTER TABLE $productsTable ADD COLUMN unit TEXT NOT NULL DEFAULT "pcs"',
+      );
       await db.execute(_createCategoriesTableSql);
     }
     if (oldVersion < 3) {
@@ -89,41 +94,89 @@ class DatabaseHelper {
     }
     if (oldVersion < 6) {
       await db.execute(
-          'ALTER TABLE $transactionsTable ADD COLUMN entity_id TEXT NOT NULL DEFAULT ""',);
+        'ALTER TABLE $transactionsTable ADD COLUMN entity_id TEXT NOT NULL DEFAULT ""',
+      );
       await db.execute(
-          'ALTER TABLE $transactionsTable ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0',);
+        'ALTER TABLE $transactionsTable ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0',
+      );
     }
     if (oldVersion < 7) {
       await _addIndexes(db);
+    }
+    if (oldVersion < 8) {
+      // Use raw SQL to add columns if they don't exist
+      try {
+        await db.execute(
+          'ALTER TABLE $transactionsTable ADD COLUMN tax_amount REAL NOT NULL DEFAULT 0.0',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE $transactionItemsTable ADD COLUMN discount REAL NOT NULL DEFAULT 0.0',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE $transactionItemsTable ADD COLUMN tax REAL NOT NULL DEFAULT 0.0',
+        );
+      } catch (_) {}
     }
   }
 
   Future<void> _addIndexes(sqlite.Database db) async {
     // Products indexes
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_category ON $productsTable (category)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_sku ON $productsTable (sku)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_barcode ON $productsTable (barcode)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_stock ON $productsTable (stock)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_updated_at ON $productsTable (updated_at)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_products_category ON $productsTable (category)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_products_sku ON $productsTable (sku)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_products_barcode ON $productsTable (barcode)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_products_stock ON $productsTable (stock)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_products_updated_at ON $productsTable (updated_at)',
+    );
 
     // Transactions indexes
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON $transactionsTable (created_at)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_type ON $transactionsTable (type)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_entity_id ON $transactionsTable (entity_id)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON $transactionsTable (created_at)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_type ON $transactionsTable (type)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_entity_id ON $transactionsTable (entity_id)',
+    );
 
     // Transaction items indexes
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON $transactionItemsTable (transaction_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_transaction_items_product_id ON $transactionItemsTable (product_id)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON $transactionItemsTable (transaction_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_transaction_items_product_id ON $transactionItemsTable (product_id)',
+    );
 
     // Stock movements indexes
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id ON $stockMovementsTable (product_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_movements_created_at ON $stockMovementsTable (created_at)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id ON $stockMovementsTable (product_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_movements_created_at ON $stockMovementsTable (created_at)',
+    );
 
     // Customers
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_customers_name ON $customersTable (name)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customers_name ON $customersTable (name)',
+    );
 
     // Suppliers
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_suppliers_name ON $suppliersTable (name)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_suppliers_name ON $suppliersTable (name)',
+    );
   }
 
   static const String _createProductsTableSql = '''
@@ -160,6 +213,7 @@ CREATE TABLE $transactionsTable (
   type TEXT NOT NULL,
   total_amount REAL NOT NULL DEFAULT 0,
   discount REAL NOT NULL DEFAULT 0,
+  tax_amount REAL NOT NULL DEFAULT 0,
   notes TEXT NOT NULL DEFAULT '',
   payment_method TEXT NOT NULL DEFAULT 'Cash',
   entity_name TEXT NOT NULL DEFAULT '',
@@ -176,6 +230,8 @@ CREATE TABLE $transactionItemsTable (
   product_id TEXT NOT NULL,
   quantity INTEGER NOT NULL,
   price_at_time REAL NOT NULL,
+  discount REAL NOT NULL DEFAULT 0,
+  tax REAL NOT NULL DEFAULT 0,
   FOREIGN KEY (transaction_id) REFERENCES $transactionsTable (id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES $productsTable (id) ON DELETE CASCADE
 )
@@ -426,13 +482,13 @@ CREATE TABLE $suppliersTable (
     for (final itemMap in allItemMaps) {
       final String txId = itemMap['transaction_id'] as String;
       itemsByTxId.putIfAbsent(txId, () => []).add(
-        TransactionItem.fromMap(
-          itemMap,
-          productName: itemMap['product_name'] as String?,
-          productEmoji: itemMap['product_emoji'] as String?,
-          productUnit: itemMap['product_unit'] as String?,
-        ),
-      );
+            TransactionItem.fromMap(
+              itemMap,
+              productName: itemMap['product_name'] as String?,
+              productEmoji: itemMap['product_emoji'] as String?,
+              productUnit: itemMap['product_unit'] as String?,
+            ),
+          );
     }
 
     // Assemble transactions with their items
@@ -480,11 +536,13 @@ CREATE TABLE $suppliersTable (
 
     final List<Map<String, Object?>> maps = await db.rawQuery(query, args);
     return maps
-        .map((m) => StockMovement.fromMap(
-              m,
-              productName: m['product_name'] as String?,
-              productEmoji: m['product_emoji'] as String?,
-            ),)
+        .map(
+          (m) => StockMovement.fromMap(
+            m,
+            productName: m['product_name'] as String?,
+            productEmoji: m['product_emoji'] as String?,
+          ),
+        )
         .toList();
   }
 
