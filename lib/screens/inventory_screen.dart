@@ -211,6 +211,14 @@ class _BottomNav extends StatelessWidget {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.analytics_rounded),
+              title: const Text('Reports & Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.reports);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.assignment_return_outlined),
               title: const Text('Sales Return'),
               onTap: () {
@@ -281,9 +289,7 @@ class _InventoryHeader extends StatelessWidget {
             onFilterSelected: provider.setFilter,
           ),
           SizedBox(height: AppConstants.spacing.lg),
-          const _FlowCarousel(),
-          SizedBox(height: AppConstants.spacing.md),
-          _RecentSuppliersRow(),
+          const _RecentActivityPlaceholder(),
           SizedBox(height: AppConstants.spacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -296,8 +302,10 @@ class _InventoryHeader extends StatelessWidget {
                 children: <Widget>[
                   IconButton(
                     onPressed: () => _showSortSheet(context, provider),
-                    icon: Icon(Icons.sort_rounded,
-                        color: AppConstants.colors.primary,),
+                    icon: Icon(
+                      Icons.sort_rounded,
+                      color: AppConstants.colors.primary,
+                    ),
                     tooltip: 'Sort Products',
                   ),
                   TextButton(
@@ -327,8 +335,10 @@ class _InventoryHeader extends StatelessWidget {
             children: <Widget>[
               Padding(
                 padding: EdgeInsets.all(AppConstants.spacing.page),
-                child: Text('Sort by',
-                    style: Theme.of(context).textTheme.titleMedium,),
+                child: Text(
+                  'Sort by',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               _SortTile(
                 label: 'Newest First',
@@ -363,8 +373,8 @@ class _InventoryHeader extends StatelessWidget {
   }
 }
 
-class _FlowCarousel extends StatelessWidget {
-  const _FlowCarousel();
+class _RecentActivityPlaceholder extends StatelessWidget {
+  const _RecentActivityPlaceholder();
 
   @override
   Widget build(BuildContext context) {
@@ -372,140 +382,33 @@ class _FlowCarousel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Business Flow',
+          'Recent Activity',
           style: Theme.of(context).textTheme.titleSmall,
         ),
         SizedBox(height: AppConstants.spacing.md),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _FlowItem(
-                label: 'Purchase',
-                subtitle: 'Add Stock',
-                icon: Icons.add_shopping_cart_rounded,
-                color: AppConstants.colors.primary,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.purchase),
-              ),
-              _FlowItem(
-                label: 'Stock',
-                subtitle: 'Adjustment',
-                icon: Icons.tune_rounded,
-                color: AppConstants.colors.purple,
-                onTap: () =>
-                    Navigator.pushNamed(context, AppRoutes.stockAdjustment),
-              ),
-              _FlowItem(
-                label: 'Sell',
-                subtitle: 'POS System',
-                icon: Icons.sell_rounded,
-                color: AppConstants.colors.green,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.pos),
-              ),
-              _FlowItem(
-                label: 'Return',
-                subtitle: 'Any Type',
-                icon: Icons.assignment_return_rounded,
-                color: AppConstants.colors.orange,
-                onTap: () => _showReturnMenu(context),
-              ),
-              _FlowItem(
-                label: 'Reports',
-                subtitle: 'Analysis',
-                icon: Icons.analytics_rounded,
-                color: AppConstants.colors.blue,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.reports),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showReturnMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.keyboard_return_rounded),
-              title: const Text('Sales Return (from Customer)'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, AppRoutes.salesReturn);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.assignment_return_rounded),
-              title: const Text('Purchase Return (to Supplier)'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, AppRoutes.purchaseReturn);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FlowItem extends StatelessWidget {
-  const _FlowItem({
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(right: AppConstants.spacing.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-        child: Container(
-          width: 100,
-          padding: const EdgeInsets.all(12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppConstants.colors.surface,
             borderRadius: BorderRadius.circular(AppConstants.radii.lg),
             border: Border.all(color: AppConstants.colors.border),
           ),
-          child: Column(
+          child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 20),
+              Icon(
+                Icons.auto_awesome_rounded,
+                color: AppConstants.colors.textMuted,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(width: 12),
               Text(
-                label,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(color: AppConstants.colors.textMuted, fontSize: 9),
+                'Coming in the next update.',
+                style: TextStyle(color: AppConstants.colors.textMuted),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -534,81 +437,6 @@ class _SortTile extends StatelessWidget {
         onTap();
         Navigator.pop(context);
       },
-    );
-  }
-}
-
-class _RecentSuppliersRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final supplierProvider = context.watch<SupplierProvider>();
-    final suppliers = supplierProvider.recentSuppliers;
-
-    if (suppliers.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Recent Suppliers',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.suppliers),
-              child: const Text('View All', style: TextStyle(fontSize: 12)),
-            ),
-          ],
-        ),
-        SizedBox(
-          height: 80,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: suppliers.length,
-            itemBuilder: (context, index) {
-              final s = suppliers[index];
-              return Padding(
-                padding: EdgeInsets.only(right: AppConstants.spacing.md),
-                child: InkWell(
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.supplierDetails,
-                    arguments: s,
-                  ),
-                  borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-                  child: Container(
-                    width: 70,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppConstants.colors.surface,
-                      borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-                      border: Border.all(color: AppConstants.colors.border),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          child: Text(s.name[0], style: const TextStyle(fontSize: 12)),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          s.name,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }

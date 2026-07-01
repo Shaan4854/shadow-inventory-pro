@@ -95,7 +95,7 @@ class _ProductPickerState extends State<ProductPicker> {
           TextField(
             controller: _searchController,
             focusNode: _focusNode,
-            autofocus: true,
+            autofocus: false,
             decoration: InputDecoration(
               hintText: 'Search by name, SKU or barcode...',
               prefixIcon: const Icon(Icons.search_rounded),
