@@ -1,9 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/product.dart';
+import '../providers/product_provider.dart';
 import '../utils/app_constants.dart';
+import '../utils/app_routes.dart';
+import 'modern_chip.dart';
+import 'product_form_sheet.dart';
 
 /// Inventory product card matching the updated Shadow design.
 class ProductCard extends StatelessWidget {
@@ -38,6 +43,9 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double margin =
+        product.sellPrice > 0 ? (profit / product.sellPrice) * 100 : 0;
+
     return InkWell(
       onTap: onEdit,
       child: Padding(
@@ -54,16 +62,33 @@ class ProductCard extends StatelessWidget {
                     product.name,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(
-                    product.category.isEmpty ? 'General' : product.category,
-                    style: TextStyle(
-                        color: AppConstants.colors.textMuted, fontSize: 12,),
+                  SizedBox(height: AppConstants.spacing.xxs),
+                  ModernChip(
+                    label: product.category.isEmpty
+                        ? 'General'
+                        : product.category,
                   ),
-                  Text(
-                    '${AppConstants.currencySymbol}${product.sellPrice}',
-                    style: TextStyle(
-                        color: AppConstants.colors.green,
-                        fontWeight: FontWeight.bold,),
+                  SizedBox(height: AppConstants.spacing.xxs),
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        '${AppConstants.currencySymbol}${product.sellPrice}',
+                        style: TextStyle(
+                          color: AppConstants.colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (product.sellPrice > 0) ...<Widget>[
+                        SizedBox(width: AppConstants.spacing.sm),
+                        Text(
+                          '${margin.toStringAsFixed(1)}% margin',
+                          style: TextStyle(
+                            color: AppConstants.colors.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -87,11 +112,91 @@ class ProductCard extends StatelessWidget {
               ],
             ),
             SizedBox(width: AppConstants.spacing.md),
-            Icon(Icons.more_vert,
-                color: AppConstants.colors.textMuted, size: 18,),
+            InkWell(
+              onTap: () => _showActions(context),
+              borderRadius: BorderRadius.circular(AppConstants.radii.md),
+              child: Padding(
+                padding: EdgeInsets.all(AppConstants.spacing.xs),
+                child: Icon(
+                  Icons.more_vert,
+                  color: AppConstants.colors.textMuted,
+                  size: 18,
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showActions(BuildContext context) {
+    final ProductProvider provider = context.read<ProductProvider>();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppConstants.colors.backgroundAlt,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppConstants.radii.sheet),
+        ),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.visibility_outlined),
+                title: const Text('View Details'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.productDetails,
+                    arguments: product,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ProductFormSheet.show(
+                    context,
+                    provider: provider,
+                    product: product,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('Duplicate'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ProductFormSheet.show(
+                    context,
+                    provider: provider,
+                    product: product,
+                    isDuplicate: true,
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded,
+                    color: AppConstants.colors.red,),
+                title: Text('Delete',
+                    style: TextStyle(color: AppConstants.colors.red),),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  onDelete();
+                },
+              ),
+              SizedBox(height: AppConstants.spacing.md),
+            ],
+          ),
+        );
+      },
     );
   }
 }
