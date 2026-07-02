@@ -4,18 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/product.dart';
+import '../models/transaction.dart';
 import '../providers/product_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/supplier_provider.dart';
+import '../theme/design_tokens.dart';
 import '../utils/app_constants.dart';
 import '../utils/app_routes.dart';
 import '../utils/sort_type.dart';
+import '../widgets/action_button.dart';
 import '../widgets/alert_banner.dart';
 import '../widgets/category_filter_bar.dart';
 import '../widgets/empty_inventory.dart';
+import '../widgets/metric_card.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_form_sheet.dart';
 import '../widgets/search_bar_widget.dart';
+import '../widgets/section_header.dart';
+import '../widgets/stock_alert_chip.dart';
+import '../widgets/transaction_card.dart';
 
 /// Main inventory dashboard assembled from reusable Shadow widgets.
 class InventoryScreen extends StatefulWidget {
@@ -273,11 +280,12 @@ class _InventoryHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const _TitleRow(),
+  const _TitleRow(),
           SizedBox(height: AppConstants.spacing.lg),
-          _SummaryCard(provider: provider),
-          SizedBox(height: AppConstants.spacing.lg),
-          _QuickStatsGrid(provider: provider),
+          _StockAlerts(provider: provider),
+          _MetricsGrid(provider: provider),
+          SizedBox(height: AppConstants.spacing.md),
+          _QuickMetricsGrid(provider: provider),
           SizedBox(height: AppConstants.spacing.lg),
           SearchBarWidget(
             onChanged: provider.search,
@@ -290,31 +298,22 @@ class _InventoryHeader extends StatelessWidget {
           ),
           SizedBox(height: AppConstants.spacing.md),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              Text(
-                'Recent Products',
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: SectionHeader(
+                  title: 'Recent Products',
+                  actionLabel: 'View All',
+                  onAction: () =>
+                      Navigator.pushNamed(context, AppRoutes.productList),
+                ),
               ),
-              Row(
-                children: <Widget>[
-                  IconButton(
-                    onPressed: () => _showSortSheet(context, provider),
-                    icon: Icon(
-                      Icons.sort_rounded,
-                      color: AppConstants.colors.primary,
-                    ),
-                    tooltip: 'Sort Products',
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, AppRoutes.productList),
-                    child: Text(
-                      'View All',
-                      style: TextStyle(color: AppConstants.colors.primary),
-                    ),
-                  ),
-                ],
+              IconButton(
+                onPressed: () => _showSortSheet(context, provider),
+                icon: Icon(
+                  Icons.sort_rounded,
+                  color: AppConstants.colors.primary,
+                ),
+                tooltip: 'Sort Products',
               ),
             ],
           ),
@@ -399,173 +398,146 @@ class _SortTile extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.provider});
+/// Inline out-of-stock / low-stock alert chips, matching the React
+/// Dashboard's alert pills. Hidden entirely when there is nothing to flag.
+class _StockAlerts extends StatelessWidget {
+  const _StockAlerts({required this.provider});
 
   final ProductProvider provider;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(AppConstants.spacing.page),
-      decoration: BoxDecoration(
-        gradient: AppConstants.colors.dashboardGradient,
-        borderRadius: BorderRadius.circular(AppConstants.radii.xl),
-      ),
-      child: Column(
+    final ShadowTokens tokens = ShadowTokens.of(context);
+    final int outOfStock = provider.outOfStockCount;
+    final int lowStock = provider.lowStockCount;
+
+    if (outOfStock == 0 && lowStock == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppConstants.spacing.lg),
+      child: Wrap(
+        spacing: AppConstants.spacing.md,
+        runSpacing: AppConstants.spacing.md,
         children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              _SummaryItem(
-                  label: 'Total Products', value: '${provider.totalItems}',),
-              _SummaryItem(
-                  label: 'Total Stock', value: '${provider.totalStock}',),
-            ],
-          ),
-          SizedBox(height: AppConstants.spacing.lg),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              _SummaryItem(
-                label: 'Inventory Value',
-                value:
-                    '${AppConstants.currencySymbol}${provider.totalBuyValue.round()}',
-              ),
-              _SummaryItem(
-                label: 'Today\'s Profit',
-                value:
-                    '${AppConstants.currencySymbol}${provider.todayProfit.round()}',
-              ),
-            ],
-          ),
+          if (outOfStock > 0)
+            StockAlertChip(
+              message:
+                  '$outOfStock product${outOfStock == 1 ? '' : 's'} out of stock',
+              icon: Icons.trending_down_rounded,
+              color: tokens.destructive,
+            ),
+          if (lowStock > 0)
+            StockAlertChip(
+              message:
+                  '$lowStock product${lowStock == 1 ? '' : 's'} running low',
+              icon: Icons.warning_amber_rounded,
+              color: tokens.chart5,
+            ),
         ],
       ),
     );
   }
 }
 
-class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickStatsGrid extends StatelessWidget {
-  const _QuickStatsGrid({required this.provider});
+/// Headline stat grid (Total Products, Total Stock, Inventory Value,
+/// Today's Profit), reflowed to a 2-col mobile grid. Mirrors the React
+/// Dashboard's `StatCard` row. Uses `todayProfit` (existing
+/// `ProductProvider` metric) rather than React's "Today's Revenue" — no
+/// revenue getter exists on the provider, and adding one would mean
+/// writing new business logic, which is out of scope for a UI migration.
+class _MetricsGrid extends StatelessWidget {
+  const _MetricsGrid({required this.provider});
 
   final ProductProvider provider;
 
   @override
   Widget build(BuildContext context) {
-    final customerProvider = context.watch<CustomerProvider>();
-    final supplierProvider = context.watch<SupplierProvider>();
+    final ShadowTokens tokens = ShadowTokens.of(context);
 
-    return Row(
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: AppConstants.spacing.md,
+      crossAxisSpacing: AppConstants.spacing.md,
+      childAspectRatio: 1.5,
       children: <Widget>[
-        Expanded(
-          child: _QuickStatCard(
-            label: 'Low Stock',
-            value: '${provider.lowStockCount}',
-            color: AppConstants.colors.red,
-            icon: Icons.warning_amber_rounded,
-          ),
+        MetricCard(
+          label: 'Total Products',
+          value: '${provider.totalItems}',
+          accentColor: tokens.chart1,
         ),
-        SizedBox(width: AppConstants.spacing.md),
-        Expanded(
-          child: _QuickStatCard(
-            label: 'Out of Stock',
-            value: '${provider.outOfStockCount}',
-            color: AppConstants.colors.orange,
-            icon: Icons.error_outline_rounded,
-          ),
+        MetricCard(
+          label: 'Total Stock',
+          value: '${provider.totalStock}',
+          sub: 'units in inventory',
+          accentColor: tokens.chart4,
         ),
-        SizedBox(width: AppConstants.spacing.md),
-        Expanded(
-          child: _QuickStatCard(
-            label: 'Customers',
-            value: '${customerProvider.customers.length}',
-            color: AppConstants.colors.blue,
-            icon: Icons.people_outline,
-          ),
+        MetricCard(
+          label: 'Inventory Value',
+          value:
+              '${AppConstants.currencySymbol}${provider.totalBuyValue.round()}',
+          accentColor: tokens.chart3,
         ),
-        SizedBox(width: AppConstants.spacing.md),
-        Expanded(
-          child: _QuickStatCard(
-            label: 'Suppliers',
-            value: '${supplierProvider.suppliers.length}',
-            color: AppConstants.colors.yellow,
-            icon: Icons.business_rounded,
-          ),
+        MetricCard(
+          label: "Today's Profit",
+          value:
+              '${AppConstants.currencySymbol}${provider.todayProfit.round()}',
+          accentColor: tokens.chart5,
         ),
       ],
     );
   }
 }
 
-class _QuickStatCard extends StatelessWidget {
-  const _QuickStatCard({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
+/// Compact icon-led quick metrics (Out of Stock, Low Stock, Customers,
+/// Suppliers), matching the React Dashboard's "Quick Metrics" row.
+class _QuickMetricsGrid extends StatelessWidget {
+  const _QuickMetricsGrid({required this.provider});
 
-  final String label;
-  final String value;
-
-  final Color color;
-  final IconData icon;
+  final ProductProvider provider;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(AppConstants.spacing.md),
-      decoration: BoxDecoration(
-        color: AppConstants.colors.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radii.lg),
-        border: Border.all(color: AppConstants.colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(icon, color: color, size: 20),
-          SizedBox(height: AppConstants.spacing.xs),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                TextStyle(color: AppConstants.colors.textMuted, fontSize: 10),
-          ),
-        ],
-      ),
+    final ShadowTokens tokens = ShadowTokens.of(context);
+    final CustomerProvider customerProvider = context.watch<CustomerProvider>();
+    final SupplierProvider supplierProvider = context.watch<SupplierProvider>();
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: AppConstants.spacing.md,
+      crossAxisSpacing: AppConstants.spacing.md,
+      childAspectRatio: 1.7,
+      children: <Widget>[
+        QuickMetricCard(
+          label: 'Out of Stock',
+          value: '${provider.outOfStockCount}',
+          icon: Icons.trending_down_rounded,
+          color: tokens.destructive,
+        ),
+        QuickMetricCard(
+          label: 'Low Stock',
+          value: '${provider.lowStockCount}',
+          icon: Icons.warning_amber_rounded,
+          color: tokens.chart5,
+        ),
+        QuickMetricCard(
+          label: 'Customers',
+          value: '${customerProvider.customers.length}',
+          icon: Icons.people_outline_rounded,
+          color: tokens.primary,
+        ),
+        QuickMetricCard(
+          label: 'Suppliers',
+          value: '${supplierProvider.suppliers.length}',
+          icon: Icons.business_rounded,
+          color: tokens.accent,
+        ),
+      ],
     );
   }
 }
@@ -663,9 +635,16 @@ class _ProductList extends StatelessWidget {
         AppConstants.spacing.page,
         AppConstants.spacing.bottomListPadding,
       ),
-      itemCount: products.length,
+      itemCount: products.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 1),
       itemBuilder: (BuildContext context, int index) {
+        if (index == products.length) {
+          return Padding(
+            padding: EdgeInsets.only(top: AppConstants.spacing.lg),
+            child: _DashboardFooter(provider: provider),
+          );
+        }
+
         final Product product = products[index];
 
         return ProductCard(
@@ -713,5 +692,103 @@ class _ProductList extends StatelessWidget {
     if (confirmed ?? false) {
       await provider.deleteProduct(product.id);
     }
+  }
+}
+
+/// Trailing Dashboard content shown below the product list: Recent
+/// Transactions preview + Quick Actions row, matching the React
+/// Dashboard's lower sections. Placed after the product browser (rather
+/// than before it) so the existing searchable/filterable list — which
+/// doubles as this screen's "Recent Products" section — keeps its
+/// current scroll position and behavior unchanged.
+class _DashboardFooter extends StatelessWidget {
+  const _DashboardFooter({required this.provider});
+
+  final ProductProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Transaction> recentTransactions =
+        provider.transactions.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SectionHeader(
+          title: 'Recent Transactions',
+          actionLabel: 'View All',
+          onAction: () => Navigator.pushNamed(context, AppRoutes.transactions),
+        ),
+        SizedBox(height: AppConstants.spacing.md),
+        if (recentTransactions.isEmpty)
+          const _EmptySectionCard(message: 'No transactions yet')
+        else
+          ...recentTransactions.map(
+            (Transaction tx) => TransactionCard(
+              transaction: tx,
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.transactionDetails,
+                arguments: tx,
+              ),
+            ),
+          ),
+        SizedBox(height: AppConstants.spacing.lg),
+        Text(
+          'Quick Actions',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        SizedBox(height: AppConstants.spacing.md),
+        Wrap(
+          spacing: AppConstants.spacing.md,
+          runSpacing: AppConstants.spacing.md,
+          children: <Widget>[
+            ActionButton(
+              label: 'New Sale',
+              icon: Icons.point_of_sale_rounded,
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.pos),
+            ),
+            ActionButton(
+              label: 'New Purchase',
+              icon: Icons.local_shipping_outlined,
+              variant: ActionButtonVariant.secondary,
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.purchase),
+            ),
+            ActionButton(
+              label: 'Add Product',
+              icon: Icons.inventory_2_outlined,
+              variant: ActionButtonVariant.outline,
+              onPressed: () =>
+                  ProductFormSheet.show(context, provider: provider),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptySectionCard extends StatelessWidget {
+  const _EmptySectionCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(AppConstants.spacing.page * 2),
+      decoration: BoxDecoration(
+        color: AppConstants.colors.surface,
+        borderRadius: BorderRadius.circular(AppConstants.radii.lg),
+        border: Border.all(color: AppConstants.colors.border),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        message,
+        style: TextStyle(color: AppConstants.colors.textMuted),
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/design_tokens.dart';
 import 'app_constants.dart';
 
 /// Material 3 dark theme tuned to match the original Shadow visual language.
@@ -97,6 +98,9 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w600,
       ),
     ),
+    extensions: const <ThemeExtension<dynamic>>[
+      ShadowTokens.dark,
+    ],
   );
 
   static OutlineInputBorder _inputBorder(Color color) {
